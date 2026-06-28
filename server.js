@@ -37,17 +37,26 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── Rate limiting for admin endpoints ────────────────────────────
-const _adminHits = new Map();
-function adminRateLimit(req, res, next) {
-  const ip = req.ip || req.connection.remoteAddress;
-  const now = Date.now(), window = 15 * 60 * 1000, max = 30;
-  const hits = (_adminHits.get(ip) || []).filter(t => now - t < window);
-  if (hits.length >= max) return res.status(429).json({ error: 'יותר מדי בקשות, נסה שוב בעוד 15 דקות' });
-  hits.push(now);
-  _adminHits.set(ip, hits);
-  next();
+// ── Rate limiting ─────────────────────────────────────────────────
+function makeRateLimit(windowMs, max, msg) {
+  const hits = new Map();
+  return (req, res, next) => {
+    const ip = req.ip || req.connection.remoteAddress;
+    const now = Date.now();
+    const recent = (hits.get(ip) || []).filter(t => now - t < windowMs);
+    if (recent.length >= max) return res.status(429).json({ error: msg });
+    recent.push(now);
+    hits.set(ip, recent);
+    next();
+  };
 }
+
+// Admin: 30 בקשות / 15 דקות
+const adminRateLimit = makeRateLimit(15 * 60 * 1000, 30, 'יותר מדי בקשות, נסה שוב בעוד 15 דקות');
+// הזמנת תור: 5 הזמנות / 10 דקות (מניעת ספאם)
+const bookRateLimit  = makeRateLimit(10 * 60 * 1000, 5,  'יותר מדי הזמנות, נסה שוב בעוד מעט');
+// בדיקת זמינות: 60 בקשות / דקה
+const availRateLimit = makeRateLimit(60 * 1000, 60, 'יותר מדי בקשות');
 
 app.use(express.json({ limit: '20kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -262,7 +271,7 @@ app.get('/api/vapid-public', (req, res) => {
   res.json({ key: VAPID_PUBLIC || null });
 });
 
-app.get('/api/availability', async (req, res) => {
+app.get('/api/availability', availRateLimit, async (req, res) => {
   const { date } = req.query;
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Bad date' });
   const all = await readJSON(APPT_FILE, []);
@@ -274,7 +283,7 @@ app.get('/api/blocked', async (req, res) => {
   res.json(await readJSON(BLOCK_FILE, []));
 });
 
-app.post('/api/appointments', async (req, res) => {
+app.post('/api/appointments', bookRateLimit, async (req, res) => {
   const fullName = clean(req.body.fullName, 80);
   const phone    = clean(req.body.phone, 24);
   const notes    = clean(req.body.notes, 400);
@@ -296,7 +305,7 @@ app.post('/api/appointments', async (req, res) => {
   };
   all.push(appt);
   await writeJSON(APPT_FILE, all);
-  res.status(201).json(appt);
+  res.status(201).json({ ok: true, id: appt.id, date: appt.date, time: appt.time });
 });
 
 // ── Admin ────────────────────────────────────────────────────────
