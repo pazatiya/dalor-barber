@@ -216,10 +216,16 @@ img{display:block}
   to{opacity:1;transform:none}
 }
 .h-address{
+  display:inline-flex;align-items:center;gap:4px;
   margin-top:8px;
-  font-size:.72rem;color:rgba(154,149,144,.45);font-weight:600;
+  font-size:.72rem;color:rgba(154,149,144,.55);font-weight:600;
+  text-decoration:none;
+  border-bottom:1px dashed rgba(154,149,144,.25);
+  padding-bottom:1px;
+  transition:color .15s;
   animation:hrise .6s cubic-bezier(.23,1,.32,1) 1.05s both;
 }
+.h-address:hover{color:rgba(201,168,76,.7)}
 
 /* ══════════════════════════════════════════
    APP SHELL
@@ -519,7 +525,7 @@ img{display:block}
     <span>·</span>
     <span>ו׳ &nbsp;08:00–15:30</span>
   </div>
-  <div class="h-address">📍 אלי כהן 12, לוד</div>
+  <a class="h-address" href="https://waze.com/ul?q=%D7%A4%D7%96+%D7%95%D7%99%D7%90%D7%99%D7%A8&navigate=yes" target="_blank" rel="noreferrer">📍 אלי כהן 12, לוד &nbsp;·&nbsp; 🗺 נווט</a>
 </div>
 
 <!-- ══════════════ BOOKING APP ══════════════ -->
