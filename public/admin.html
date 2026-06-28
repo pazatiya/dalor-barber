@@ -299,25 +299,69 @@ img{display:block}
 .mcta:disabled{opacity:.45;cursor:wait}
 .merr{color:var(--red);font-size:.85rem;font-weight:600;min-height:18px;margin-top:8px}
 
-/* ── Block-date Modal ─────────────────────────── */
-#blockModal{
+/* ── Status Modal (bottom sheet) ──────────────── */
+#statusModal{
   position:fixed;inset:0;z-index:100;
-  background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
-  display:flex;align-items:center;justify-content:center;padding:24px;
+  background:rgba(0,0,0,.65);backdrop-filter:blur(4px);
+  display:flex;align-items:flex-end;justify-content:center;
   animation:mfin .2s ease;
 }
-#blockModal.hidden{display:none}
-.bm-card{
-  background:var(--s);border:1px solid var(--bdg);
-  border-radius:var(--r);padding:24px;width:100%;max-width:380px;
+#statusModal.hidden{display:none}
+.sm-sheet{
+  background:var(--s);border-top:1px solid var(--bdg);
+  border-radius:var(--r) var(--r) 0 0;
+  padding:14px 18px 36px;width:100%;max-width:520px;
 }
-.bm-title{font-size:1.1rem;font-weight:900;margin-bottom:14px}
-.bm-date{font-size:1rem;color:var(--gold2);font-weight:700;margin-bottom:20px}
-.bm-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
-.bm-confirm{background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.3);color:var(--red);border-radius:var(--rs);padding:11px;font-weight:700;font-size:.9rem;transition:background .15s}
-.bm-confirm:hover{background:rgba(248,113,113,.25)}
-.bm-cancel{background:var(--s2);border:1px solid var(--bd);color:var(--mt);border-radius:var(--rs);padding:11px;font-weight:700;font-size:.9rem;transition:background .15s}
-.bm-cancel:hover{background:rgba(255,255,255,.08)}
+.sm-handle{width:36px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 16px}
+.sm-title{font-size:1.05rem;font-weight:900;margin-bottom:3px}
+.sm-date{font-size:.85rem;color:var(--gold2);font-weight:700;margin-bottom:14px}
+.sm-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}
+.sm-opt{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:10px 4px;border:1.5px solid var(--bd);border-radius:var(--rs);
+  background:var(--s2);cursor:pointer;transition:all .15s;
+}
+.sm-opt:hover{border-color:var(--bdg);background:rgba(255,255,255,.06)}
+.sm-opt.sm-sel{border-color:var(--gold);background:rgba(201,168,76,.12)}
+.sm-opt.sm-open-sel{border-color:rgba(74,222,128,.5);background:rgba(74,222,128,.06)}
+.sm-opt-icon{font-size:1.2rem}
+.sm-opt-label{font-size:.68rem;font-weight:700;color:var(--mt);text-align:center;line-height:1.2}
+.sm-opt.sm-sel .sm-opt-label,.sm-opt.sm-open-sel .sm-opt-label{color:var(--tx)}
+.sm-note{
+  width:100%;padding:9px 12px;margin-bottom:10px;
+  background:var(--s2);border:1px solid var(--bd);
+  border-radius:var(--rs);color:var(--tx);font-size:.9rem;direction:rtl;
+}
+.sm-note::placeholder{color:var(--mt)}
+.sm-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sm-save{
+  background:linear-gradient(135deg,var(--gold2),var(--gold));
+  color:#15110a;border-radius:var(--rs);padding:12px;font-weight:900;font-size:.95rem;
+}
+.sm-cancel{background:var(--s2);border:1px solid var(--bd);color:var(--mt);border-radius:var(--rs);padding:12px;font-weight:700}
+/* ── Day Status Banner ─────────────────────── */
+.dsb{
+  display:flex;align-items:center;gap:10px;
+  margin:0 0 10px;padding:11px 14px;border-radius:var(--rs);
+  cursor:pointer;transition:opacity .15s;border:1px solid;
+}
+.dsb:hover{opacity:.8}
+.dsb-icon{font-size:1.1rem}
+.dsb-text{flex:1;font-size:.88rem;font-weight:700}
+.dsb-change{font-size:.72rem;color:var(--mt);white-space:nowrap}
+.dsb-vacation{background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.3);color:#93c5fd}
+.dsb-phone_only{background:rgba(139,92,246,.08);border-color:rgba(139,92,246,.3);color:#c4b5fd}
+.dsb-walkin_only{background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.3);color:#fcd34d}
+.dsb-closed{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3);color:#fca5a5}
+.dsb-busy{background:rgba(249,115,22,.08);border-color:rgba(249,115,22,.3);color:#fdba74}
+.dsb-custom{background:rgba(148,163,184,.08);border-color:rgba(148,163,184,.3);color:#cbd5e1}
+/* ── Status nav button ─────────────────────── */
+#statusbtn{
+  background:var(--s2);border:1px solid var(--bd);border-radius:var(--rs);
+  padding:5px 10px;font-size:.78rem;font-weight:700;color:var(--mt);
+  transition:all .15s;white-space:nowrap;
+}
+#statusbtn.has-status{border-color:var(--gold);color:var(--gold2)}
 
 /* ── Responsive ──────────────────────────────── */
 @media(min-width:520px){
@@ -406,7 +450,10 @@ img{display:block}
     <button id="prevday" class="dnav-btn" aria-label="יום קודם">›</button>
     <div class="dnav-center">
       <div id="navdate">טוען…</div>
-      <button id="todaybtn">חזרה להיום</button>
+      <div style="display:flex;gap:6px;justify-content:center;margin-top:4px">
+        <button id="todaybtn">חזרה להיום</button>
+        <button id="statusbtn" onclick="openStatusModal(A.curDate)">📅 סטטוס</button>
+      </div>
     </div>
     <button id="nextday" class="dnav-btn" aria-label="יום הבא">‹</button>
   </div>
@@ -457,15 +504,25 @@ img{display:block}
   </div>
 </div>
 
-<!-- ═══════════ BLOCK DATE MODAL ═══════════ -->
-<div id="blockModal" class="hidden">
-  <div class="bm-card">
-    <div class="bm-title">חסימת / פתיחת יום</div>
-    <div id="bmDate" class="bm-date"></div>
-    <p style="color:var(--mt);font-size:.88rem;line-height:1.5">האם לחסום את היום הזה? לקוחות לא יוכלו לקבוע תור בתאריך זה.</p>
-    <div class="bm-btns">
-      <button id="bmConfirm" class="bm-confirm">חסום יום</button>
-      <button id="bmCancel" class="bm-cancel">ביטול</button>
+<!-- ═══════════ STATUS MODAL ═══════════ -->
+<div id="statusModal" class="hidden">
+  <div class="sm-sheet">
+    <div class="sm-handle"></div>
+    <div class="sm-title">סטטוס יום</div>
+    <div id="smDate" class="sm-date"></div>
+    <div class="sm-opts" id="smOpts">
+      <button class="sm-opt" data-type="open"><span class="sm-opt-icon">✅</span><span class="sm-opt-label">פתוח לתורים</span></button>
+      <button class="sm-opt" data-type="vacation"><span class="sm-opt-icon">🏖️</span><span class="sm-opt-label">חופשה</span></button>
+      <button class="sm-opt" data-type="phone_only"><span class="sm-opt-icon">📞</span><span class="sm-opt-label">טלפוניים בלבד</span></button>
+      <button class="sm-opt" data-type="walkin_only"><span class="sm-opt-icon">🚶</span><span class="sm-opt-label">הגעה ישירה</span></button>
+      <button class="sm-opt" data-type="closed"><span class="sm-opt-icon">🔒</span><span class="sm-opt-label">סגור</span></button>
+      <button class="sm-opt" data-type="busy"><span class="sm-opt-icon">⚠️</span><span class="sm-opt-label">מלא — אין מקום</span></button>
+      <button class="sm-opt" data-type="custom" style="grid-column:span 3"><span class="sm-opt-icon">✏️</span><span class="sm-opt-label">הודעה מותאמת</span></button>
+    </div>
+    <input id="smNote" class="sm-note hidden" type="text" placeholder="הודעה ללקוחות… (עד 200 תווים)" maxlength="200" dir="rtl"/>
+    <div class="sm-btns">
+      <button id="smSave" class="sm-save" onclick="saveStatus()">שמור</button>
+      <button class="sm-cancel" onclick="closeStatusModal()">ביטול</button>
     </div>
   </div>
 </div>
@@ -569,6 +626,18 @@ function statusLabel(s){
 }
 
 // ════════════════════════════════════════════
+// STATUS CONFIG
+// ════════════════════════════════════════════
+const STATUS_CFG = {
+  vacation:    { icon:'🏖️', label:'חופשה',          msg:'יאיר בחופשה — לא ניתן לקבוע תור' },
+  phone_only:  { icon:'📞', label:'טלפוניים בלבד',  msg:'ניתן לקבוע תור בטלפון בלבד' },
+  walkin_only: { icon:'🚶', label:'הגעה ישירה',      msg:'הגעה ישירה למספרה בלבד ביום זה' },
+  closed:      { icon:'🔒', label:'סגור',             msg:'המספרה סגורה ביום זה' },
+  busy:        { icon:'⚠️', label:'מלא — אין מקום', msg:'ההזמנות ליום זה מלאות' },
+  custom:      { icon:'✏️', label:'הודעה מותאמת',    msg:'' },
+};
+
+// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
 const A = {
@@ -576,7 +645,10 @@ const A = {
   curDate: toISO(new Date()),
   appts: [],
   blocked: [],
+  dayStatus: {},
   allAppts: [],
+  _smDate: '',
+  _smType: '',
 };
 
 function adminFetch(url, opts={}){
@@ -649,13 +721,19 @@ async function loadDay(){
   document.getElementById('navdate').textContent = fmtShort(A.curDate);
 
   try{
-    const [ar, br] = await Promise.all([
+    const [ar, br, sr] = await Promise.all([
       adminFetch(`/api/admin/appointments?date=${A.curDate}`),
       fetch('/api/blocked'),
+      fetch('/api/day-status'),
     ]);
-    A.appts   = ar.ok ? await ar.json() : [];
-    A.blocked = br.ok ? await br.json() : [];
-  }catch{ A.appts=[]; A.blocked=[]; }
+    A.appts      = ar.ok ? await ar.json() : [];
+    A.blocked    = br.ok ? await br.json() : [];
+    A.dayStatus  = sr.ok ? await sr.json() : {};
+  }catch{ A.appts=[]; A.blocked=[]; A.dayStatus={}; }
+
+  const st = A.dayStatus[A.curDate];
+  const btn = document.getElementById('statusbtn');
+  if(btn){ btn.classList.toggle('has-status', !!st); }
 
   renderAppts();
 }
@@ -700,6 +778,7 @@ function renderAppts(){
   const isHol = CLOSED.has(A.curDate);
   const d = new Date(A.curDate+'T12:00:00');
   const isShab = d.getDay()===6;
+  const dayStatus = A.dayStatus[A.curDate];
 
   // Find next upcoming appointment for today
   const now = new Date();
@@ -714,8 +793,22 @@ function renderAppts(){
     }
   }
 
+  // Remove existing status banner
+  document.getElementById('dayStatusBanner')?.remove();
+
+  // Show status banner if a custom status is set
+  if(dayStatus){
+    const cfg = STATUS_CFG[dayStatus.type] || {};
+    const banner = document.createElement('div');
+    banner.id = 'dayStatusBanner';
+    banner.className = `dsb dsb-${dayStatus.type}`;
+    banner.innerHTML = `<span class="dsb-icon">${cfg.icon||'📋'}</span><span class="dsb-text">${dayStatus.note || cfg.label}</span><span class="dsb-change">שנה ›</span>`;
+    banner.onclick = () => openStatusModal(A.curDate);
+    list.before(banner);
+  }
+
   if(!A.appts.length){
-    const msg = isShab ? 'שבת שלום 🕍' : isHol ? 'יום חג — מספרה סגורה 🕎' : isBlocked ? 'יום חסום — מספרה סגורה' : 'אין תורים ביום זה';
+    const msg = isShab ? 'שבת שלום 🕍' : isHol ? 'יום חג — מספרה סגורה 🕎' : isBlocked ? 'יום חסום — מספרה סגורה' : dayStatus ? (STATUS_CFG[dayStatus.type]?.msg || dayStatus.note || 'סטטוס מיוחד') : 'אין תורים ביום זה';
     list.innerHTML = `<div class="empty-day"><div class="em-ico">${isShab||isHol?'🕍':'📅'}</div><p>${msg}</p></div>`;
     return;
   }
@@ -799,6 +892,79 @@ async function delAppt(id){
     A.appts = A.appts.filter(a=>a.id!==id);
     renderAppts();
   }catch{}
+}
+
+// ════════════════════════════════════════════
+// DAY STATUS MODAL
+// ════════════════════════════════════════════
+function openStatusModal(ds){
+  A._smDate = ds;
+  A._smType = '';
+  document.getElementById('smDate').textContent = fmtShort(ds);
+  document.getElementById('smNote').classList.add('hidden');
+  document.getElementById('smNote').value = '';
+
+  // Pre-select current status
+  const cur = A.dayStatus[ds];
+  document.querySelectorAll('.sm-opt').forEach(btn=>{
+    btn.classList.remove('sm-sel','sm-open-sel');
+    if(cur && btn.dataset.type===cur.type){
+      btn.classList.add('sm-sel');
+      A._smType = cur.type;
+      if(cur.note){ document.getElementById('smNote').value=cur.note; document.getElementById('smNote').classList.remove('hidden'); }
+    }
+    if(!cur && btn.dataset.type==='open') btn.classList.add('sm-open-sel');
+  });
+
+  document.getElementById('statusModal').classList.remove('hidden');
+}
+
+function closeStatusModal(){
+  document.getElementById('statusModal').classList.add('hidden');
+}
+
+async function saveStatus(){
+  const ds = A._smDate;
+  const type = A._smType;
+  const note = document.getElementById('smNote').value.trim();
+
+  if(!type || type==='open'){
+    // Remove status (open = no restriction)
+    try{ await adminFetch(`/api/admin/day-status/${ds}`, {method:'DELETE'}); }catch{}
+    delete A.dayStatus[ds];
+  } else {
+    try{
+      const r = await adminFetch('/api/admin/day-status', {
+        method:'PUT', body: JSON.stringify({date:ds, type, ...(note&&{note})})
+      });
+      if(!r.ok) return;
+    }catch{ return; }
+    A.dayStatus[ds] = {type, ...(note&&{note})};
+  }
+
+  const btn = document.getElementById('statusbtn');
+  if(btn) btn.classList.toggle('has-status', !!A.dayStatus[ds]);
+  closeStatusModal();
+  renderAppts();
+}
+
+// Status option click handler — set up after DOM ready
+function initStatusOpts(){
+  document.querySelectorAll('.sm-opt').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const t = btn.dataset.type;
+      A._smType = t;
+      document.querySelectorAll('.sm-opt').forEach(b=>b.classList.remove('sm-sel','sm-open-sel'));
+      btn.classList.add(t==='open'?'sm-open-sel':'sm-sel');
+      const noteEl = document.getElementById('smNote');
+      if(t==='custom'){ noteEl.classList.remove('hidden'); noteEl.focus(); }
+      else noteEl.classList.add('hidden');
+    });
+  });
+  // Close on backdrop click
+  document.getElementById('statusModal').addEventListener('click', e=>{
+    if(e.target===document.getElementById('statusModal')) closeStatusModal();
+  });
 }
 
 // ════════════════════════════════════════════
@@ -1019,6 +1185,8 @@ function dismissToast(safeKey){
 // ════════════════════════════════════════════
 // AUTO-LOGIN (saved key)
 // ════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', ()=>{ initStatusOpts(); });
+
 const savedKey = localStorage.getItem(ADMIN_KEY_LS);
 if(savedKey){
   A.key = savedKey;

@@ -382,6 +382,29 @@ img{display:block}
 .ts.sel{background:var(--gold);border-color:var(--gold);color:#15110a}
 .no-slots{color:var(--mt);text-align:center;padding:40px 0;font-size:.95rem}
 
+/* ── Day Status ─────────────────────────────────── */
+.day-status-msg{
+  display:flex;flex-direction:column;align-items:center;
+  padding:36px 20px 20px;text-align:center;
+}
+.dsm-icon{font-size:3rem;margin-bottom:14px;line-height:1}
+.dsm-title{font-size:1.1rem;font-weight:900;color:var(--tx);margin-bottom:8px}
+.dsm-text{font-size:.9rem;color:var(--mt);line-height:1.6;margin-bottom:24px;max-width:260px}
+.dsm-wa{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:11px 22px;border-radius:var(--r);
+  background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.22);
+  color:#4ade80;font-weight:700;font-size:.9rem;
+  text-decoration:none;transition:background .12s;
+}
+.dsm-wa:hover{background:rgba(37,211,102,.15)}
+/* small emoji badge on calendar cells with status */
+.cd.has-day-status{position:relative}
+.cd.has-day-status::after{
+  content:attr(data-st);font-size:.55rem;
+  position:absolute;top:1px;left:2px;line-height:1;
+}
+
 /* ── Form ───────────────────────────────────────── */
 .recap-chip{
   display:inline-flex;gap:6px;align-items:center;
@@ -683,7 +706,16 @@ function getSlots(ds){
 
 function fmtHe(ds){ return longFmt.format(new Date(ds+'T12:00:00')); }
 
-const S = { step:1, calY:new Date().getFullYear(), calM:new Date().getMonth(), date:null, time:null, booked:[], blocked:new Set() };
+const STATUS_CFG = {
+  vacation:    { icon:'🏖️', title:'יאיר בחופשה',         text:'לא ניתן לקבוע תור — ניתן לפנות בוואטסאפ' },
+  phone_only:  { icon:'📞', title:'תורים טלפוניים בלבד',  text:'ביום זה ניתן לקבוע תור בטלפון בלבד' },
+  walkin_only: { icon:'🚶', title:'הגעה ישירה בלבד',      text:'ביום זה ניתן להגיע ישירות למספרה, ללא הזמנה מראש' },
+  closed:      { icon:'🔒', title:'המספרה סגורה',          text:'המספרה אינה פעילה ביום זה' },
+  busy:        { icon:'⚠️', title:'מלא — אין מקום',       text:'ההזמנות ליום זה מלאות. ניתן לנסות יום אחר או ליצור קשר' },
+  custom:      { icon:'📋', title:'הודעה מיאיר',           text:'' },
+};
+
+const S = { step:1, calY:new Date().getFullYear(), calM:new Date().getMonth(), date:null, time:null, booked:[], blocked:new Set(), dayStatus:{} };
 
 // ── Home → App transition ────────────────────────
 document.getElementById('enterBtn').addEventListener('click', () => {
@@ -730,6 +762,11 @@ function renderCal(){
     else if(HALF.has(ds)) cls.push('half');
     if(ds===today) cls.push('today');
     if(ds===S.date) cls.push('sel');
+    const dst = S.dayStatus[ds];
+    if(dst && !cls.includes('dis')){
+      cls.push('has-day-status');
+      el.setAttribute('data-st', (STATUS_CFG[dst.type]||{}).icon||'📋');
+    }
     el.className=cls.join(' ');
     el.textContent=d;
     if(!cls.includes('dis')) el.addEventListener('click',()=>onDate(ds));
@@ -746,10 +783,29 @@ async function onDate(ds){
 // ── Time Slots ───────────────────────────────────
 function renderTime(ds){
   document.getElementById('s2date').textContent=fmtHe(ds);
-  const slots=getSlots(ds), grid=document.getElementById('tgrid'), empty=document.getElementById('noslots');
-  grid.innerHTML='';
+  const grid=document.getElementById('tgrid'), empty=document.getElementById('noslots');
+  grid.innerHTML=''; empty.classList.add('hidden');
+
+  // Check day status
+  const dst = S.dayStatus[ds];
+  if(dst){
+    const cfg = STATUS_CFG[dst.type] || {};
+    const displayText = dst.type==='custom' ? (dst.note||'יאיר הגדיר הודעה מיוחדת ליום זה') : cfg.text;
+    const waLink = `https://wa.me/${WA}?text=${encodeURIComponent('שלום יאיר! אני רוצה לקבוע תור 💈')}`;
+    grid.innerHTML=`<div class="day-status-msg">
+      <div class="dsm-icon">${cfg.icon||'📋'}</div>
+      <div class="dsm-title">${dst.type==='custom'?(dst.note||cfg.title):cfg.title}</div>
+      ${dst.type!=='custom'?`<div class="dsm-text">${displayText}</div>`:''}
+      <a class="dsm-wa" href="${waLink}" target="_blank" rel="noreferrer">
+        <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        צרו קשר בוואטסאפ
+      </a>
+    </div>`;
+    return;
+  }
+
+  const slots=getSlots(ds);
   if(!slots.length){ empty.classList.remove('hidden'); return; }
-  empty.classList.add('hidden');
   slots.forEach(t=>{
     const bkd=S.booked.includes(t);
     const btn=document.createElement('button');
@@ -816,9 +872,13 @@ document.getElementById('s2back').addEventListener('click',()=>go(1));
 document.getElementById('s3back').addEventListener('click',()=>{ S.time=null; renderTime(S.date); go(2); });
 document.getElementById('resetbtn').addEventListener('click',resetApp);
 
-// ── Init — preload blocked dates in background ────
+// ── Init — preload blocked dates + day statuses ──
 (async()=>{
-  try{ S.blocked=new Set(await (await fetch('/api/blocked')).json()); }catch{}
+  try{
+    const [br, sr] = await Promise.all([fetch('/api/blocked'), fetch('/api/day-status')]);
+    if(br.ok) S.blocked = new Set(await br.json());
+    if(sr.ok) S.dayStatus = await sr.json();
+  }catch{}
 })();
 </script>
 </body>

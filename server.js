@@ -9,9 +9,10 @@ const webpush    = require('web-push');
 const app      = express();
 const PORT     = process.env.PORT || 3020;
 const DATA_DIR = path.join(__dirname, 'data');
-const APPT_FILE  = path.join(DATA_DIR, 'appointments.json');
-const BLOCK_FILE = path.join(DATA_DIR, 'blocked.json');
-const SUBS_FILE  = path.join(DATA_DIR, 'subscriptions.json');
+const APPT_FILE   = path.join(DATA_DIR, 'appointments.json');
+const BLOCK_FILE  = path.join(DATA_DIR, 'blocked.json');
+const SUBS_FILE   = path.join(DATA_DIR, 'subscriptions.json');
+const STATUS_FILE = path.join(DATA_DIR, 'day-status.json');
 const ADMIN_KEY  = process.env.ADMIN_KEY || '2810';
 
 const GMAIL_USER     = process.env.GMAIL_USER;
@@ -283,6 +284,10 @@ app.get('/api/blocked', async (req, res) => {
   res.json(await readJSON(BLOCK_FILE, []));
 });
 
+app.get('/api/day-status', async (req, res) => {
+  res.json(await readJSON(STATUS_FILE, {}));
+});
+
 app.post('/api/appointments', bookRateLimit, async (req, res) => {
   const fullName = clean(req.body.fullName, 80);
   const phone    = clean(req.body.phone, 24);
@@ -392,6 +397,28 @@ app.get('/api/admin/due-reminders', requireAdmin, async (req, res) => {
 app.put('/api/admin/blocked', requireAdmin, async (req, res) => {
   if (!Array.isArray(req.body)) return res.status(400).json({ error: 'Expected array' });
   await writeJSON(BLOCK_FILE, req.body);
+  res.json({ ok: true });
+});
+
+// ── Day Status (admin) ───────────────────────────────────────────
+app.put('/api/admin/day-status', async (req, res) => {
+  const date = clean(req.body.date || '', 10);
+  const type = clean(req.body.type || '', 20);
+  const note = clean(req.body.note || '', 200);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Bad date' });
+  const valid = ['vacation','phone_only','walkin_only','closed','busy','custom'];
+  if (!valid.includes(type)) return res.status(400).json({ error: 'Bad type' });
+  const all = await readJSON(STATUS_FILE, {});
+  all[date] = { type, ...(note && { note }) };
+  await writeJSON(STATUS_FILE, all);
+  res.json({ ok: true });
+});
+
+app.delete('/api/admin/day-status/:date', async (req, res) => {
+  const date = req.params.date;
+  const all = await readJSON(STATUS_FILE, {});
+  delete all[date];
+  await writeJSON(STATUS_FILE, all);
   res.json({ ok: true });
 });
 
