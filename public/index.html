@@ -669,6 +669,10 @@ function getSlots(ds){
   let e = HALF.has(ds)?14*60 : dow===5?(isSummerIL(d)?(15*60+30):14*60) : 20*60;
   const out=[];
   for(let m=s;m+SLOT<=e;m+=SLOT) out.push(`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`);
+  if(ds===todayISO()){
+    const now=new Date(), nowMins=now.getHours()*60+now.getMinutes()+30;
+    return out.filter(t=>{ const [h,m]=t.split(':').map(Number); return h*60+m>=nowMins; });
+  }
   return out;
 }
 
