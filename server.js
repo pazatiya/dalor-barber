@@ -27,7 +27,29 @@ if (VAPID_PUBLIC && VAPID_PRIVATE) {
   webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC, VAPID_PRIVATE);
 }
 
-app.use(express.json({ limit: '1mb' }));
+// ── Security headers ─────────────────────────────────────────────
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
+// ── Rate limiting for admin endpoints ────────────────────────────
+const _adminHits = new Map();
+function adminRateLimit(req, res, next) {
+  const ip = req.ip || req.connection.remoteAddress;
+  const now = Date.now(), window = 15 * 60 * 1000, max = 30;
+  const hits = (_adminHits.get(ip) || []).filter(t => now - t < window);
+  if (hits.length >= max) return res.status(429).json({ error: 'יותר מדי בקשות, נסה שוב בעוד 15 דקות' });
+  hits.push(now);
+  _adminHits.set(ip, hits);
+  next();
+}
+
+app.use(express.json({ limit: '20kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 async function readJSON(file, fallback) {
@@ -43,9 +65,14 @@ async function writeJSON(file, data) {
 function clean(v, max) { return String(v || '').trim().replace(/\s+/g, ' ').slice(0, max); }
 
 function requireAdmin(req, res, next) {
-  if (req.headers['x-admin-key'] !== ADMIN_KEY) return res.status(401).json({ error: 'Unauthorized' });
+  if (req.headers['x-admin-key'] !== ADMIN_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   next();
 }
+
+// All /api/admin/* routes get rate limiting + auth
+app.use('/api/admin', adminRateLimit, requireAdmin);
 
 // ── Push notifications ───────────────────────────────────────────
 

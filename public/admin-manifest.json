@@ -1,8 +1,8 @@
 {
-  "name": "DALOR - יאיר ברבר סטודיו",
-  "short_name": "DALOR",
-  "description": "קביעת תורים - DALOR ברבר סטודיו, אלי כהן 12 לוד",
-  "start_url": "/",
+  "name": "DALOR ניהול",
+  "short_name": "DALOR Admin",
+  "description": "ממשק ניהול תורים - DALOR ברבר סטודיו",
+  "start_url": "/admin.html",
   "display": "standalone",
   "background_color": "#06060a",
   "theme_color": "#c9a84c",
