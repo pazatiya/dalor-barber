@@ -1,0 +1,17 @@
+{
+  "name": "Yair Barber Booking",
+  "short_name": "Yair Barber",
+  "description": "קביעת תורים למספרה של יאיר",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0b0d",
+  "theme_color": "#0b0b0d",
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

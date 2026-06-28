@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<meta name="theme-color" content="#09090c"/>
+<title>DALOR | ממשק ניהול</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#09090c;--s:#111115;--s2:#17171c;--s3:#1e1e24;
+  --bd:rgba(255,255,255,.08);--bdg:rgba(201,168,76,.28);
+  --tx:#f5f0e8;--mt:#9a9590;
+  --gold:#c9a84c;--gold2:#f0d783;
+  --green:#34d399;--red:#f87171;--orange:#fb923c;
+  --blue:#60a5fa;
+  --r:12px;--rs:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Heebo',system-ui,sans-serif;background:var(--bg);color:var(--tx);min-height:100dvh}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer;border:none;background:none;color:inherit}
+img{display:block}
+.hidden{display:none!important}
+
+/* ── Login ────────────────────────────────────── */
+#login{
+  position:fixed;inset:0;z-index:200;
+  background:linear-gradient(135deg,rgba(9,9,12,.97),rgba(15,15,20,.97));
+  display:grid;place-items:center;
+  padding:24px;
+}
+.login-card{
+  background:var(--s);border:1px solid var(--bdg);
+  border-radius:20px;padding:36px 28px;
+  width:100%;max-width:360px;text-align:center;
+  box-shadow:0 32px 80px rgba(0,0,0,.5);
+}
+.lc-logo{
+  width:80px;height:80px;border-radius:50%;object-fit:cover;
+  border:1px solid var(--bdg);margin:0 auto 16px;
+  box-shadow:0 0 40px rgba(201,168,76,.15);
+}
+.lc-name{font-family:'Playfair Display',serif;font-size:2rem;color:var(--gold2);letter-spacing:.15em;margin-bottom:4px}
+.lc-sub{color:var(--mt);font-size:.85rem;font-weight:600;letter-spacing:.06em;margin-bottom:28px}
+.lc-input{
+  width:100%;background:var(--s2);border:1px solid var(--bd);
+  color:var(--tx);border-radius:var(--rs);padding:13px 16px;
+  font-size:1rem;outline:none;text-align:center;letter-spacing:.1em;
+  transition:border-color .15s,box-shadow .15s;margin-bottom:12px;
+}
+.lc-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.12)}
+.lc-btn{
+  width:100%;min-height:50px;
+  background:linear-gradient(135deg,var(--gold2),var(--gold));
+  border-radius:var(--rs);color:#15110a;
+  font-size:1rem;font-weight:900;
+  transition:opacity .15s;
+}
+.lc-btn:hover{opacity:.9}
+.lc-err{color:var(--red);font-size:.85rem;font-weight:600;min-height:18px;margin-top:10px}
+
+/* ── Admin App ────────────────────────────────── */
+#adminApp{display:flex;flex-direction:column;min-height:100dvh}
+
+/* ── Header ──────────────────────────────────── */
+#ahdr{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:11px 18px;
+  background:rgba(9,9,12,.94);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--bd);
+  position:sticky;top:0;z-index:20;
+}
+.ahbrand{display:flex;align-items:center;gap:9px}
+.ahlogo{width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--bdg)}
+.ahname{font-family:'Playfair Display',serif;font-size:1rem;color:var(--gold2);letter-spacing:.1em;line-height:1.1}
+.ahsub{font-size:.7rem;color:var(--mt);font-weight:700;margin-top:1px}
+.ahright{display:flex;align-items:center;gap:10px}
+#aclock{font-size:.82rem;color:var(--mt);font-weight:700;font-variant-numeric:tabular-nums}
+.logout-btn{
+  padding:6px 12px;border-radius:var(--rs);
+  background:rgba(255,255,255,.06);border:1px solid var(--bd);
+  color:var(--mt);font-size:.8rem;font-weight:700;
+  transition:background .15s;
+}
+.logout-btn:hover{background:rgba(248,113,113,.15);border-color:rgba(248,113,113,.3);color:var(--red)}
+#bellbtn{
+  width:34px;height:34px;border-radius:50%;
+  background:rgba(255,255,255,.06);border:1px solid var(--bd);
+  color:var(--mt);font-size:.95rem;
+  display:grid;place-items:center;
+  transition:background .15s,border-color .15s;
+  position:relative;
+}
+#bellbtn.on{color:var(--gold2);border-color:var(--bdg);background:rgba(201,168,76,.08)}
+#bellbtn:hover{background:rgba(201,168,76,.12);border-color:var(--bdg)}
+.bell-dot{
+  position:absolute;top:4px;right:4px;
+  width:7px;height:7px;border-radius:50%;
+  background:var(--red);border:1.5px solid var(--bg);
+  display:none;
+}
+#bellbtn.needs-perm .bell-dot{display:block}
+
+/* ── Day Navigator ───────────────────────────── */
+#daynav{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:14px 18px 10px;
+  border-bottom:1px solid var(--bd);
+}
+.dnav-btn{
+  width:36px;height:36px;border-radius:50%;
+  background:var(--s2);border:1px solid var(--bd);
+  color:var(--tx);display:grid;place-items:center;
+  font-size:1.1rem;transition:background .15s,border-color .15s;flex-shrink:0;
+}
+.dnav-btn:hover{background:rgba(201,168,76,.15);border-color:var(--bdg)}
+.dnav-center{text-align:center;flex:1}
+#navdate{font-size:1.05rem;font-weight:800;color:var(--tx);line-height:1.2}
+#todaybtn{
+  font-size:.75rem;color:var(--gold);font-weight:700;
+  margin-top:3px;text-decoration:underline;
+}
+#todaybtn:hover{color:var(--gold2)}
+
+/* ── Stats bar ───────────────────────────────── */
+#statsbar{
+  display:flex;gap:10px;padding:12px 18px;
+  overflow-x:auto;border-bottom:1px solid var(--bd);
+  scrollbar-width:none;
+}
+#statsbar::-webkit-scrollbar{display:none}
+.stat{
+  flex-shrink:0;background:var(--s2);border:1px solid var(--bd);
+  border-radius:var(--rs);padding:10px 16px;
+  display:flex;flex-direction:column;gap:2px;min-width:100px;
+}
+.stat-n{font-size:1.5rem;font-weight:900;line-height:1;color:var(--gold2)}
+.stat-l{font-size:.75rem;color:var(--mt);font-weight:600;white-space:nowrap}
+.stat.today-stat{border-color:rgba(201,168,76,.25);background:rgba(201,168,76,.06)}
+
+/* ── Appointment List ─────────────────────────── */
+#apptlist{
+  flex:1;padding:16px 18px 100px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.empty-day{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;padding:60px 0;color:var(--mt);text-align:center;
+}
+.empty-day .em-ico{font-size:2.5rem;opacity:.4}
+.empty-day p{font-size:.95rem;font-weight:600}
+
+/* ── Appointment Card ─────────────────────────── */
+.acard{
+  background:var(--s);border:1px solid var(--bd);
+  border-radius:var(--r);overflow:hidden;
+  transition:border-color .2s;
+}
+.acard.confirmed{border-color:rgba(201,168,76,.2)}
+.acard.completed{border-color:rgba(52,211,153,.18);opacity:.7}
+.acard.cancelled{border-color:rgba(248,113,113,.18);opacity:.5}
+.acard-top{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:14px 16px 12px;
+}
+.time-badge{
+  background:var(--s3);border:1px solid var(--bd);
+  border-radius:var(--rs);padding:6px 10px;
+  font-size:.9rem;font-weight:900;color:var(--gold2);
+  white-space:nowrap;flex-shrink:0;line-height:1;
+  display:grid;place-items:center;min-width:56px;
+  font-variant-numeric:tabular-nums;
+}
+.acard.completed .time-badge{color:var(--green)}
+.acard.cancelled .time-badge{color:var(--mt);text-decoration:line-through}
+.ainfo{flex:1;min-width:0}
+.aname{font-size:1.05rem;font-weight:800;color:var(--tx);line-height:1.2}
+.acard.cancelled .aname{text-decoration:line-through;color:var(--mt)}
+.aphone{
+  font-size:.85rem;color:var(--mt);font-weight:600;margin-top:3px;
+  display:flex;align-items:center;gap:6px;
+}
+.anotes{font-size:.82rem;color:var(--mt);margin-top:5px;line-height:1.4;font-style:italic}
+.astatus{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 8px;border-radius:20px;
+  font-size:.72rem;font-weight:800;letter-spacing:.04em;
+  margin-top:5px;
+}
+.astatus.confirmed{background:rgba(201,168,76,.12);color:var(--gold2);border:1px solid rgba(201,168,76,.2)}
+.astatus.completed{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.astatus.cancelled{background:rgba(248,113,113,.08);color:var(--red);border:1px solid rgba(248,113,113,.15)}
+.wa-call{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;border-radius:50%;
+  background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.25);
+  color:#4ade80;text-decoration:none;font-size:13px;
+  transition:background .15s;flex-shrink:0;
+}
+.wa-call:hover{background:rgba(37,211,102,.22)}
+.acard-actions{
+  display:flex;border-top:1px solid var(--bd);
+}
+.aact{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:11px 8px;font-size:.8rem;font-weight:700;
+  transition:background .12s;border-left:1px solid var(--bd);
+}
+.aact:first-child{border-left:none}
+.aact.done{color:var(--green)}
+.aact.done:hover{background:rgba(52,211,153,.1)}
+.aact.cancel{color:var(--orange)}
+.aact.cancel:hover{background:rgba(251,146,60,.08)}
+.aact.del{color:var(--red)}
+.aact.del:hover{background:rgba(248,113,113,.08)}
+.aact.undo{color:var(--mt)}
+.aact.undo:hover{background:rgba(255,255,255,.06)}
+.aact svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.src-badge{
+  font-size:.7rem;color:rgba(96,165,250,.7);font-weight:600;
+  margin-top:3px;display:block;
+}
+
+/* ── FAB ─────────────────────────────────────── */
+#fab{
+  position:fixed;bottom:28px;left:22px;
+  width:58px;height:58px;border-radius:50%;
+  background:linear-gradient(135deg,var(--gold2),var(--gold));
+  color:#15110a;font-size:1.8rem;font-weight:300;
+  display:grid;place-items:center;
+  box-shadow:0 8px 28px rgba(201,168,76,.4);
+  transition:transform .15s,box-shadow .15s;
+  z-index:15;
+}
+#fab:hover{transform:scale(1.07);box-shadow:0 12px 36px rgba(201,168,76,.5)}
+
+/* ── Modal ───────────────────────────────────── */
+#modal{
+  position:fixed;inset:0;z-index:100;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  display:flex;align-items:flex-end;
+  padding:0;
+  animation:mfin .2s ease;
+}
+#modal.hidden{display:none}
+@keyframes mfin{from{opacity:0}to{opacity:1}}
+.msheet{
+  width:100%;max-width:520px;margin:0 auto;
+  background:var(--s);border-radius:20px 20px 0 0;
+  border-top:1px solid var(--bdg);
+  padding:20px 22px 48px;
+  animation:sfin .28s cubic-bezier(.175,.885,.32,1);
+  max-height:92dvh;overflow-y:auto;
+}
+@keyframes sfin{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.mhdr h3{font-size:1.2rem;font-weight:900}
+.mclose{
+  width:32px;height:32px;border-radius:50%;
+  background:var(--s2);border:1px solid var(--bd);
+  color:var(--mt);font-size:1rem;
+  display:grid;place-items:center;
+  transition:background .15s;
+}
+.mclose:hover{background:rgba(248,113,113,.15);color:var(--red)}
+.field{display:grid;gap:6px;margin-bottom:14px}
+.field label{font-size:.85rem;color:var(--mt);font-weight:700}
+.field input,.field textarea,.field select{
+  background:var(--s2);border:1px solid var(--bd);
+  color:var(--tx);border-radius:var(--rs);padding:12px 14px;
+  width:100%;outline:none;font-size:1rem;
+  transition:border-color .15s,box-shadow .15s;
+}
+.field input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.5)}
+.field input:focus,.field textarea:focus,.field select:focus{
+  border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.1)
+}
+.field textarea{min-height:80px;resize:vertical}
+.field select option{background:var(--s2)}
+.mcta{
+  width:100%;min-height:52px;
+  background:linear-gradient(135deg,var(--gold2),var(--gold));
+  border-radius:var(--rs);color:#15110a;
+  font-size:1rem;font-weight:900;margin-top:6px;
+  box-shadow:0 6px 20px rgba(201,168,76,.25);
+  transition:opacity .15s;
+}
+.mcta:hover{opacity:.9}
+.mcta:disabled{opacity:.45;cursor:wait}
+.merr{color:var(--red);font-size:.85rem;font-weight:600;min-height:18px;margin-top:8px}
+
+/* ── Block-date Modal ─────────────────────────── */
+#blockModal{
+  position:fixed;inset:0;z-index:100;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;padding:24px;
+  animation:mfin .2s ease;
+}
+#blockModal.hidden{display:none}
+.bm-card{
+  background:var(--s);border:1px solid var(--bdg);
+  border-radius:var(--r);padding:24px;width:100%;max-width:380px;
+}
+.bm-title{font-size:1.1rem;font-weight:900;margin-bottom:14px}
+.bm-date{font-size:1rem;color:var(--gold2);font-weight:700;margin-bottom:20px}
+.bm-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
+.bm-confirm{background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.3);color:var(--red);border-radius:var(--rs);padding:11px;font-weight:700;font-size:.9rem;transition:background .15s}
+.bm-confirm:hover{background:rgba(248,113,113,.25)}
+.bm-cancel{background:var(--s2);border:1px solid var(--bd);color:var(--mt);border-radius:var(--rs);padding:11px;font-weight:700;font-size:.9rem;transition:background .15s}
+.bm-cancel:hover{background:rgba(255,255,255,.08)}
+
+/* ── Responsive ──────────────────────────────── */
+@media(min-width:520px){
+  #adminApp{max-width:520px;margin:0 auto}
+  #fab{left:50%;transform:translateX(calc(-260px + 22px));}
+  #fab:hover{transform:translateX(calc(-260px + 22px)) scale(1.07)}
+}
+
+/* ── Reminder Toasts ──────────────────────── */
+#reminderContainer{
+  position:fixed;top:0;left:0;right:0;z-index:300;
+  display:flex;flex-direction:column;gap:8px;
+  padding:8px 12px;pointer-events:none;
+}
+.reminder-toast{
+  background:var(--s);border:1px solid;
+  border-radius:var(--r);padding:14px 16px;
+  display:flex;flex-direction:column;gap:10px;
+  pointer-events:auto;
+  box-shadow:0 8px 32px rgba(0,0,0,.6);
+  animation:rtin .3s cubic-bezier(.175,.885,.32,1);
+}
+@keyframes rtin{from{transform:translateY(-16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes rtout{to{transform:translateY(-16px);opacity:0;pointer-events:none}}
+.reminder-toast.r-24h{border-color:rgba(96,165,250,.35);background:rgba(12,18,28,.97)}
+.reminder-toast.r-30m{border-color:rgba(251,146,60,.35);background:rgba(28,16,8,.97)}
+.rtop{display:flex;align-items:center;gap:10px}
+.rtag{
+  padding:3px 9px;border-radius:20px;
+  font-size:.7rem;font-weight:800;letter-spacing:.04em;flex-shrink:0;
+}
+.r-24h .rtag{background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.25)}
+.r-30m .rtag{background:rgba(251,146,60,.12);color:var(--orange);border:1px solid rgba(251,146,60,.25)}
+.rinfo{flex:1;min-width:0}
+.rname{font-size:.92rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rtime-str{font-size:.8rem;color:var(--mt);margin-top:2px}
+.rdismiss{color:var(--mt);font-size:1rem;padding:4px 8px;border-radius:var(--rs);flex-shrink:0;line-height:1}
+.rdismiss:hover{color:var(--tx);background:rgba(255,255,255,.08)}
+.rwa-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:10px 14px;border-radius:var(--rs);
+  background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.28);
+  color:#4ade80;font-size:.88rem;font-weight:700;
+  text-decoration:none;transition:background .15s;
+}
+.rwa-btn:hover{background:rgba(37,211,102,.22)}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ LOGIN ═══════════ -->
+<div id="login">
+  <div class="login-card">
+    <img class="lc-logo" src="/logo.jpg" alt="DALOR"/>
+    <div class="lc-name">DALOR</div>
+    <div class="lc-sub">ממשק ניהול מספרה</div>
+    <input id="keyinput" class="lc-input" type="password" placeholder="מפתח כניסה" autocomplete="current-password"/>
+    <button id="loginbtn" class="lc-btn">כניסה לממשק</button>
+    <div id="loginerr" class="lc-err"></div>
+  </div>
+</div>
+
+<!-- ═══════════ ADMIN APP ═══════════ -->
+<div id="adminApp" class="hidden">
+
+  <!-- Header -->
+  <header id="ahdr">
+    <div class="ahbrand">
+      <img class="ahlogo" src="/logo.jpg" alt="DALOR"/>
+      <div>
+        <div class="ahname">DALOR</div>
+        <div class="ahsub">ממשק ניהול</div>
+      </div>
+    </div>
+    <div class="ahright">
+      <span id="aclock"></span>
+      <button id="bellbtn" title="התראות Push" onclick="togglePush()">
+        🔔<span class="bell-dot"></span>
+      </button>
+      <button id="logoutbtn" class="logout-btn">יציאה</button>
+    </div>
+  </header>
+
+  <!-- Day Navigator -->
+  <div id="daynav">
+    <button id="prevday" class="dnav-btn" aria-label="יום קודם">›</button>
+    <div class="dnav-center">
+      <div id="navdate">טוען…</div>
+      <button id="todaybtn">חזרה להיום</button>
+    </div>
+    <button id="nextday" class="dnav-btn" aria-label="יום הבא">‹</button>
+  </div>
+
+  <!-- Stats -->
+  <div id="statsbar"></div>
+
+  <!-- Appointment List -->
+  <div id="apptlist"></div>
+
+  <!-- FAB -->
+  <button id="fab" aria-label="תור חדש">+</button>
+</div>
+
+<!-- ═══════════ ADD MODAL ═══════════ -->
+<div id="modal" class="hidden">
+  <div class="msheet">
+    <div class="mhdr">
+      <h3>תור ידני</h3>
+      <button class="mclose" id="closemodal">✕</button>
+    </div>
+    <form id="addform" novalidate>
+      <div class="field">
+        <label for="adate">תאריך</label>
+        <input id="adate" type="date" required/>
+      </div>
+      <div class="field">
+        <label for="atime">שעה</label>
+        <select id="atime" required>
+          <option value="">— בחרו תחילה תאריך —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="aname">שם מלא *</label>
+        <input id="aname" required placeholder="ישראל ישראלי" autocomplete="off"/>
+      </div>
+      <div class="field">
+        <label for="aphone">טלפון *</label>
+        <input id="aphone" required inputmode="tel" placeholder="050-0000000"/>
+      </div>
+      <div class="field">
+        <label for="anotes">הערות</label>
+        <textarea id="anotes" placeholder="סוג תספורת, הערה מיוחדת…"></textarea>
+      </div>
+      <button type="submit" id="addbtn" class="mcta">שמירת התור</button>
+      <div id="adderr" class="merr"></div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════ BLOCK DATE MODAL ═══════════ -->
+<div id="blockModal" class="hidden">
+  <div class="bm-card">
+    <div class="bm-title">חסימת / פתיחת יום</div>
+    <div id="bmDate" class="bm-date"></div>
+    <p style="color:var(--mt);font-size:.88rem;line-height:1.5">האם לחסום את היום הזה? לקוחות לא יוכלו לקבוע תור בתאריך זה.</p>
+    <div class="bm-btns">
+      <button id="bmConfirm" class="bm-confirm">חסום יום</button>
+      <button id="bmCancel" class="bm-cancel">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ REMINDER TOASTS ═══════════ -->
+<div id="reminderContainer"></div>
+
+<script>
+// ════════════════════════════════════════════
+// CONFIG & HOLIDAYS (same as client)
+// ════════════════════════════════════════════
+const WA      = '972507983306';
+const SLOT    = 20;
+const ADMIN_KEY_LS = 'dalor_admin_key';
+
+const CLOSED = new Set([
+  "2024-04-22","2024-04-23","2024-04-24","2024-04-25","2024-04-26","2024-04-27","2024-04-28",
+  "2024-06-11","2024-10-02","2024-10-03","2024-10-11",
+  "2024-10-16","2024-10-17","2024-10-18","2024-10-19","2024-10-20","2024-10-21","2024-10-22","2024-10-23",
+  "2025-04-12","2025-04-13","2025-04-14","2025-04-15","2025-04-16","2025-04-17","2025-04-18",
+  "2025-06-01","2025-09-22","2025-09-23","2025-10-01",
+  "2025-10-06","2025-10-07","2025-10-08","2025-10-09","2025-10-10","2025-10-11","2025-10-12","2025-10-13",
+  "2026-04-01","2026-04-02","2026-04-03","2026-04-04","2026-04-05","2026-04-06","2026-04-07",
+  "2026-05-21","2026-09-11","2026-09-12","2026-09-20",
+  "2026-09-25","2026-09-26","2026-09-27","2026-09-28","2026-09-29","2026-09-30","2026-10-01","2026-10-02",
+  "2027-04-21","2027-04-22","2027-04-23","2027-04-24","2027-04-25","2027-04-26","2027-04-27",
+  "2027-06-10","2027-10-01","2027-10-02","2027-10-10",
+  "2027-10-15","2027-10-16","2027-10-17","2027-10-18","2027-10-19","2027-10-20","2027-10-21","2027-10-22",
+  "2028-04-10","2028-04-11","2028-04-12","2028-04-13","2028-04-14","2028-04-15","2028-04-16",
+  "2028-05-30","2028-09-20","2028-09-21","2028-09-29",
+  "2028-10-04","2028-10-05","2028-10-06","2028-10-07","2028-10-08","2028-10-09","2028-10-10","2028-10-11",
+  "2029-03-30","2029-03-31","2029-04-01","2029-04-02","2029-04-03","2029-04-04","2029-04-05",
+  "2029-05-19","2029-09-09","2029-09-10","2029-09-18",
+  "2029-09-23","2029-09-24","2029-09-25","2029-09-26","2029-09-27","2029-09-28","2029-09-29","2029-09-30",
+  "2030-04-17","2030-04-18","2030-04-19","2030-04-20","2030-04-21","2030-04-22","2030-04-23",
+  "2030-06-06","2030-09-27","2030-09-28","2030-10-06",
+  "2030-10-11","2030-10-12","2030-10-13","2030-10-14","2030-10-15","2030-10-16","2030-10-17","2030-10-18",
+]);
+
+const HALF = new Set([
+  "2024-04-21","2024-06-10","2024-10-01","2024-10-10","2024-10-15",
+  "2025-04-11","2025-05-31","2025-09-21","2025-09-30","2025-10-05",
+  "2026-03-31","2026-05-20","2026-09-10","2026-09-19","2026-09-24",
+  "2027-04-20","2027-06-09","2027-09-30","2027-10-09","2027-10-14",
+  "2028-04-09","2028-05-29","2028-09-19","2028-09-28","2028-10-03",
+  "2029-03-29","2029-05-18","2029-09-08","2029-09-17","2029-09-22",
+  "2030-04-16","2030-06-05","2030-09-26","2030-10-05","2030-10-10",
+]);
+
+// ════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════
+function toISO(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function isSummerIL(d){
+  const m=d.getMonth();
+  if(m>=10||m<=1) return false;
+  if(m>=3&&m<=8)  return true;
+  if(m===2){
+    const ld=new Date(d.getFullYear(),3,0);
+    while(ld.getDay()!==5) ld.setDate(ld.getDate()-1);
+    return d.getDate()>=ld.getDate();
+  }
+  const ld=new Date(d.getFullYear(),10,0);
+  while(ld.getDay()!==0) ld.setDate(ld.getDate()-1);
+  return d.getDate()<ld.getDate();
+}
+
+function getSlots(ds){
+  const d=new Date(ds+'T12:00:00');
+  const dow=d.getDay();
+  if(dow===6) return [];
+  const s=8*60;
+  let e;
+  if(HALF.has(ds))      e=14*60;
+  else if(dow===5)      e=isSummerIL(d)?(15*60+30):(14*60);
+  else                  e=20*60;
+  const out=[];
+  for(let m=s;m+SLOT<=e;m+=SLOT){
+    out.push(`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`);
+  }
+  return out;
+}
+
+const HE_DOW = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+const HE_MON = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+const longFmt = new Intl.DateTimeFormat('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+function fmtDate(ds){ return longFmt.format(new Date(ds+'T12:00:00')); }
+function fmtShort(ds){
+  const d=new Date(ds+'T12:00:00');
+  return `יום ${HE_DOW[d.getDay()]}, ${d.getDate()} ב${HE_MON[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function statusLabel(s){
+  if(s==='completed') return 'הושלם';
+  if(s==='cancelled') return 'בוטל';
+  return 'מאושר';
+}
+
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+const A = {
+  key: '',
+  curDate: toISO(new Date()),
+  appts: [],
+  blocked: [],
+  allAppts: [],
+};
+
+function adminFetch(url, opts={}){
+  return fetch(url, { ...opts, headers: { 'Content-Type':'application/json', 'x-admin-key': A.key, ...(opts.headers||{}) } });
+}
+
+// ════════════════════════════════════════════
+// LOGIN
+// ════════════════════════════════════════════
+async function tryLogin(){
+  const k = document.getElementById('keyinput').value.trim();
+  if(!k){ document.getElementById('loginerr').textContent = 'נא להזין מפתח כניסה'; return; }
+  try{
+    const r = await fetch('/api/admin/auth', { headers: { 'x-admin-key': k } });
+    if(!r.ok) throw new Error();
+    A.key = k;
+    localStorage.setItem(ADMIN_KEY_LS, k);
+    showAdmin();
+  }catch{
+    document.getElementById('loginerr').textContent = 'מפתח שגוי — נסו שנית';
+    document.getElementById('keyinput').value = '';
+    document.getElementById('keyinput').focus();
+  }
+}
+
+function showAdmin(){
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('adminApp').classList.remove('hidden');
+  startClock();
+  loadDay();
+  loadAllStats();
+  checkReminders();
+  initPush();
+  setInterval(()=>{ loadDay(); checkReminders(); }, 30000);
+}
+
+function logout(){
+  localStorage.removeItem(ADMIN_KEY_LS);
+  location.reload();
+}
+
+// ════════════════════════════════════════════
+// CLOCK
+// ════════════════════════════════════════════
+function startClock(){
+  function tick(){
+    const now = new Date();
+    document.getElementById('aclock').textContent =
+      now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  }
+  tick(); setInterval(tick, 10000);
+}
+
+// ════════════════════════════════════════════
+// DAY NAVIGATION
+// ════════════════════════════════════════════
+function shiftDay(n){
+  const d = new Date(A.curDate+'T12:00:00');
+  d.setDate(d.getDate()+n);
+  A.curDate = toISO(d);
+  loadDay();
+}
+
+function goToday(){ A.curDate = toISO(new Date()); loadDay(); }
+
+// ════════════════════════════════════════════
+// LOAD DATA
+// ════════════════════════════════════════════
+async function loadDay(){
+  document.getElementById('navdate').textContent = fmtShort(A.curDate);
+
+  try{
+    const [ar, br] = await Promise.all([
+      adminFetch(`/api/admin/appointments?date=${A.curDate}`),
+      fetch('/api/blocked'),
+    ]);
+    A.appts   = ar.ok ? await ar.json() : [];
+    A.blocked = br.ok ? await br.json() : [];
+  }catch{ A.appts=[]; A.blocked=[]; }
+
+  renderAppts();
+}
+
+async function loadAllStats(){
+  try{
+    const today = toISO(new Date());
+    const weekEnd = toISO(new Date(Date.now() + 7*86400000));
+    const [tr, wr] = await Promise.all([
+      adminFetch(`/api/admin/appointments?date=${today}`),
+      adminFetch(`/api/admin/appointments?from=${today}&to=${weekEnd}`),
+    ]);
+    const todayAppts  = tr.ok ? (await tr.json()).filter(a=>a.status!=='cancelled') : [];
+    const weekAppts   = wr.ok ? (await wr.json()).filter(a=>a.status!=='cancelled') : [];
+    renderStats(todayAppts.length, weekAppts.length);
+  }catch{ renderStats(0,0); }
+}
+
+function renderStats(todayCnt, weekCnt){
+  document.getElementById('statsbar').innerHTML = `
+    <div class="stat today-stat">
+      <span class="stat-n">${todayCnt}</span>
+      <span class="stat-l">תורים היום</span>
+    </div>
+    <div class="stat">
+      <span class="stat-n">${weekCnt}</span>
+      <span class="stat-l">תורים שבוע</span>
+    </div>
+    <div class="stat" id="nextStatCard">
+      <span class="stat-n" style="font-size:.9rem;color:var(--mt)">—</span>
+      <span class="stat-l">התור הבא</span>
+    </div>
+  `;
+}
+
+// ════════════════════════════════════════════
+// RENDER APPOINTMENTS
+// ════════════════════════════════════════════
+function renderAppts(){
+  const list = document.getElementById('apptlist');
+  const isBlocked = A.blocked.includes(A.curDate);
+  const isHol = CLOSED.has(A.curDate);
+  const d = new Date(A.curDate+'T12:00:00');
+  const isShab = d.getDay()===6;
+
+  // Find next upcoming appointment for today
+  const now = new Date();
+  const todayStr = toISO(now);
+  if(A.curDate === todayStr){
+    const curTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const next = A.appts.find(a=>a.time>curTime && a.status==='confirmed');
+    const card = document.getElementById('nextStatCard');
+    if(card){
+      if(next){card.querySelector('.stat-n').textContent=next.time; card.querySelector('.stat-n').style.fontSize='1.5rem'; card.querySelector('.stat-n').style.color='var(--gold2)'; card.querySelector('.stat-l').textContent=next.fullName;}
+      else{card.querySelector('.stat-n').textContent='—'; card.querySelector('.stat-n').style.fontSize='.9rem';}
+    }
+  }
+
+  if(!A.appts.length){
+    const msg = isShab ? 'שבת שלום 🕍' : isHol ? 'יום חג — מספרה סגורה 🕎' : isBlocked ? 'יום חסום — מספרה סגורה' : 'אין תורים ביום זה';
+    list.innerHTML = `<div class="empty-day"><div class="em-ico">${isShab||isHol?'🕍':'📅'}</div><p>${msg}</p></div>`;
+    return;
+  }
+
+  const sorted=[...A.appts].sort((a,b)=>a.time.localeCompare(b.time));
+  list.innerHTML='';
+
+  sorted.forEach(a=>{
+    const status = a.status || 'confirmed';
+    const card = document.createElement('div');
+    card.className = `acard ${status}`;
+    card.id = `card-${a.id}`;
+
+    const waMsg = `שלום, זה יאיר. מספרת DALOR.`;
+    const waLink = `https://wa.me/${a.phone.replace(/\D/g,'')}?text=${encodeURIComponent(waMsg)}`;
+
+    let acts='';
+    if(status==='confirmed'){
+      acts=`
+        <button class="aact done" onclick="setStatus('${a.id}','completed')">
+          <svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg> הושלם
+        </button>
+        <button class="aact cancel" onclick="setStatus('${a.id}','cancelled')">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> ביטול
+        </button>
+        <button class="aact del" onclick="delAppt('${a.id}')" title="מחק">
+          <svg viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>`;
+    } else {
+      acts=`
+        <button class="aact undo" onclick="setStatus('${a.id}','confirmed')">
+          <svg viewBox="0 0 24 24"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15a9 9 0 1 0 .49-3.87"/></svg> שחזור
+        </button>
+        <button class="aact del" onclick="delAppt('${a.id}')">
+          <svg viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg> מחק
+        </button>`;
+    }
+
+    card.innerHTML=`
+      <div class="acard-top">
+        <div class="time-badge">${a.time}</div>
+        <div class="ainfo">
+          <div class="aname">${a.fullName}</div>
+          <div class="aphone">
+            ${a.phone}
+            <a class="wa-call" href="${waLink}" target="_blank" rel="noreferrer" title="שלח וואטסאפ">
+              <svg style="width:13px;height:13px;fill:currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            </a>
+          </div>
+          ${a.notes?`<div class="anotes">${a.notes}</div>`:''}
+          <span class="astatus ${status}">${statusLabel(status)}</span>
+          ${a.source==='admin'?'<span class="src-badge">✏️ נקבע ידנית</span>':''}
+        </div>
+      </div>
+      <div class="acard-actions">${acts}</div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+// ════════════════════════════════════════════
+// ACTIONS
+// ════════════════════════════════════════════
+async function setStatus(id, status){
+  try{
+    const r = await adminFetch(`/api/admin/appointments/${id}`, {
+      method:'PATCH', body:JSON.stringify({status})
+    });
+    if(!r.ok) return;
+    const updated = await r.json();
+    A.appts = A.appts.map(a=>a.id===id?updated:a);
+    renderAppts();
+  }catch{}
+}
+
+async function delAppt(id){
+  if(!confirm('למחוק את התור לצמיתות?')) return;
+  try{
+    const r = await adminFetch(`/api/admin/appointments/${id}`, { method:'DELETE' });
+    if(!r.ok) return;
+    A.appts = A.appts.filter(a=>a.id!==id);
+    renderAppts();
+  }catch{}
+}
+
+// ════════════════════════════════════════════
+// ADD APPOINTMENT MODAL
+// ════════════════════════════════════════════
+function openModal(){
+  document.getElementById('modal').classList.remove('hidden');
+  document.getElementById('adderr').textContent='';
+  const di = document.getElementById('adate');
+  if(!di.value) di.value = A.curDate;
+  updateTimeOptions();
+  document.getElementById('aname').focus();
+}
+function closeModal(){ document.getElementById('modal').classList.add('hidden'); }
+
+async function updateTimeOptions(){
+  const ds = document.getElementById('adate').value;
+  const sel = document.getElementById('atime');
+  if(!ds){ sel.innerHTML='<option value="">— בחרו תחילה תאריך —</option>'; return; }
+
+  const allSlots = getSlots(ds);
+  let booked = [];
+  try{
+    const r = await adminFetch(`/api/admin/appointments?date=${ds}`);
+    const appts = await r.json();
+    booked = appts.filter(a=>a.status!=='cancelled').map(a=>a.time);
+  }catch{}
+
+  const available = allSlots.filter(t=>!booked.includes(t));
+  if(!available.length){
+    sel.innerHTML='<option value="">אין שעות פנויות</option>';
+    return;
+  }
+  sel.innerHTML='<option value="">בחרו שעה…</option>'+
+    available.map(t=>`<option value="${t}">${t}</option>`).join('');
+}
+
+document.getElementById('addform').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const ds    = document.getElementById('adate').value;
+  const time  = document.getElementById('atime').value;
+  const name  = document.getElementById('aname').value.trim();
+  const phone = document.getElementById('aphone').value.trim();
+  const notes = document.getElementById('anotes').value.trim();
+  const err   = document.getElementById('adderr');
+  err.textContent='';
+
+  if(!ds)    { err.textContent='נא לבחור תאריך'; return; }
+  if(!time)  { err.textContent='נא לבחור שעה'; return; }
+  if(!name)  { err.textContent='נא להזין שם'; return; }
+  if(!phone) { err.textContent='נא להזין טלפון'; return; }
+
+  const btn=document.getElementById('addbtn');
+  btn.disabled=true; btn.textContent='שומר…';
+  try{
+    const r=await adminFetch('/api/admin/appointments',{
+      method:'POST', body:JSON.stringify({date:ds,time,fullName:name,phone,notes})
+    });
+    if(r.status===409){ err.textContent='שעה זו כבר תפוסה'; updateTimeOptions(); return; }
+    if(!r.ok) throw new Error();
+    closeModal();
+    // Reset form
+    document.getElementById('addform').reset();
+    if(ds===A.curDate){ await loadDay(); }
+    else{ A.curDate=ds; await loadDay(); }
+  }catch{ err.textContent='שגיאה בשמירה'; }
+  finally{ btn.disabled=false; btn.textContent='שמירת התור'; }
+});
+
+document.getElementById('adate').addEventListener('change', updateTimeOptions);
+
+// ════════════════════════════════════════════
+// EVENTS
+// ════════════════════════════════════════════
+document.getElementById('loginbtn').addEventListener('click', tryLogin);
+document.getElementById('keyinput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });
+document.getElementById('logoutbtn').addEventListener('click', logout);
+document.getElementById('prevday').addEventListener('click', ()=>shiftDay(-1));
+document.getElementById('nextday').addEventListener('click', ()=>shiftDay(1));
+document.getElementById('todaybtn').addEventListener('click', goToday);
+document.getElementById('fab').addEventListener('click', openModal);
+document.getElementById('closemodal').addEventListener('click', closeModal);
+document.getElementById('modal').addEventListener('click', e=>{ if(e.target===document.getElementById('modal')) closeModal(); });
+
+// ════════════════════════════════════════════
+// WEB PUSH
+// ════════════════════════════════════════════
+let swReg = null;
+
+async function initPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    swReg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    updateBellState();
+  } catch {}
+}
+
+function updateBellState() {
+  const btn = document.getElementById('bellbtn');
+  if (!btn) return;
+  const perm = Notification.permission;
+  if (perm === 'granted') {
+    btn.classList.add('on');
+    btn.classList.remove('needs-perm');
+    btn.title = 'התראות פעילות ✓';
+  } else if (perm === 'denied') {
+    btn.classList.remove('on', 'needs-perm');
+    btn.title = 'התראות חסומות — אפשר בהגדרות הדפדפן';
+  } else {
+    btn.classList.add('needs-perm');
+    btn.classList.remove('on');
+    btn.title = 'לחץ להפעלת התראות';
+  }
+}
+
+async function togglePush() {
+  if (!swReg) { alert('הדפדפן לא תומך בהתראות'); return; }
+  if (Notification.permission === 'denied') {
+    alert('התראות חסומות — כנס להגדרות הדפדפן ואפשר אותן ידנית'); return;
+  }
+  if (Notification.permission === 'granted') {
+    // Already granted — re-subscribe silently (or just confirm)
+    await subscribePush();
+    return;
+  }
+  const result = await Notification.requestPermission();
+  if (result === 'granted') await subscribePush();
+  updateBellState();
+}
+
+async function subscribePush() {
+  if (!swReg) return;
+  try {
+    const { key } = await fetch('/api/vapid-public').then(r => r.json());
+    if (!key) return;
+
+    const existing = await swReg.pushManager.getSubscription();
+    const sub = existing || await swReg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(key),
+    });
+
+    await adminFetch('/api/admin/push-subscribe', {
+      method: 'POST', body: JSON.stringify(sub),
+    });
+    updateBellState();
+    console.log('Push subscribed');
+  } catch (err) { console.warn('Push subscribe failed:', err); }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+// ════════════════════════════════════════════
+// REMINDER TOASTS
+// ════════════════════════════════════════════
+const shownReminders = new Set();
+
+async function checkReminders(){
+  try{
+    const r = await adminFetch('/api/admin/due-reminders');
+    if(!r.ok) return;
+    const reminders = await r.json();
+    reminders.forEach(showReminderToast);
+  }catch{}
+}
+
+function showReminderToast(rem){
+  const key = `${rem.id}-${rem.reminderType}`;
+  if(shownReminders.has(key)) return;
+  shownReminders.add(key);
+
+  const is24h = rem.reminderType === '24h';
+  const tagText = is24h ? '⏰ תזכורת 24 שעות' : '⚡ תזכורת 30 דקות';
+  const timeInfo = is24h ? `${fmtShort(rem.date)}, ${rem.time}` : `בעוד ~30 דק׳ — ${rem.time}`;
+
+  const waText = is24h
+    ? `שלום ${rem.fullName}! 😊 תזכורת לתורך מחר ב-${rem.time} במספרת DALOR. מחכים לך! 💈`
+    : `שלום ${rem.fullName}! ⏰ תזכורת – התור שלך במספרת DALOR בעוד כ-30 דקות, ב-${rem.time}. ניפגש בקרוב! 💈`;
+  const waLink = `https://wa.me/${rem.phone.replace(/\D/g,'')}?text=${encodeURIComponent(waText)}`;
+
+  const safeKey = key.replace(/[^a-zA-Z0-9]/g,'-');
+  const toast = document.createElement('div');
+  toast.className = `reminder-toast r-${rem.reminderType}`;
+  toast.id = `toast-${safeKey}`;
+  toast.innerHTML = `
+    <div class="rtop">
+      <span class="rtag">${tagText}</span>
+      <div class="rinfo">
+        <div class="rname">${rem.fullName}</div>
+        <div class="rtime-str">${timeInfo}</div>
+      </div>
+      <button class="rdismiss" onclick="dismissToast('${safeKey}')">✕</button>
+    </div>
+    <a class="rwa-btn" href="${waLink}" target="_blank" rel="noreferrer" onclick="dismissToast('${safeKey}')">
+      <svg style="width:15px;height:15px;fill:currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      שלח תזכורת בוואטסאפ
+    </a>
+  `;
+  document.getElementById('reminderContainer').appendChild(toast);
+
+  // Auto-dismiss after 5 minutes if ignored
+  setTimeout(()=>dismissToast(safeKey), 300000);
+}
+
+function dismissToast(safeKey){
+  const el = document.getElementById(`toast-${safeKey}`);
+  if(!el) return;
+  el.style.animation='rtout .2s ease forwards';
+  setTimeout(()=>el.remove(), 200);
+}
+
+// ════════════════════════════════════════════
+// AUTO-LOGIN (saved key)
+// ════════════════════════════════════════════
+const savedKey = localStorage.getItem(ADMIN_KEY_LS);
+if(savedKey){
+  A.key = savedKey;
+  fetch('/api/admin/auth',{headers:{'x-admin-key':savedKey}})
+    .then(r=>{ if(r.ok) showAdmin(); else localStorage.removeItem(ADMIN_KEY_LS); })
+    .catch(()=>{});
+}
+</script>
+</body>
+</html>
