@@ -87,15 +87,22 @@ app.use('/api/admin', adminRateLimit, requireAdmin);
 // ── Push notifications ───────────────────────────────────────────
 
 async function sendPush(payload) {
-  if (!VAPID_PUBLIC || !VAPID_PRIVATE) return;
+  if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
+    console.warn('[Push] VAPID keys missing — skipping');
+    return;
+  }
   const subs = await readJSON(SUBS_FILE, []);
-  const dead = [];
+  console.log(`[Push] sending "${payload.title}" to ${subs.length} subscriber(s)`);
+  if (!subs.length) return;
 
+  const dead = [];
   await Promise.allSettled(
     subs.map(async (sub, i) => {
       try {
         await webpush.sendNotification(sub, JSON.stringify(payload));
+        console.log(`[Push] sent ok to sub #${i}`);
       } catch (err) {
+        console.error(`[Push] failed sub #${i}:`, err.statusCode, err.message);
         if (err.statusCode === 410 || err.statusCode === 404) dead.push(i);
       }
     })
@@ -104,6 +111,7 @@ async function sendPush(payload) {
   if (dead.length) {
     const alive = subs.filter((_, i) => !dead.includes(i));
     await writeJSON(SUBS_FILE, alive);
+    console.log(`[Push] removed ${dead.length} dead subscription(s)`);
   }
 }
 

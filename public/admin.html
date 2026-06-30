@@ -925,7 +925,8 @@ function renderAppts(){
     card.id = `card-${a.id}`;
 
     const waMsg = `שלום, זה יאיר. מספרת DALOR.`;
-    const waLink = `https://wa.me/${a.phone.replace(/\D/g,'')}?text=${encodeURIComponent(waMsg)}`;
+    const _waDig = a.phone.replace(/\D/g,'');
+    const waLink = `https://wa.me/${_waDig.startsWith('0')?'972'+_waDig.slice(1):_waDig}?text=${encodeURIComponent(waMsg)}`;
 
     let acts='';
     if(status==='confirmed'){
@@ -1162,6 +1163,8 @@ async function initPush() {
     swReg = await navigator.serviceWorker.register('/sw.js');
     await navigator.serviceWorker.ready;
     updateBellState();
+    // אם כבר אישרו — רשום מחדש אוטומטית (מונע אובדן subscription אחרי reload)
+    if (Notification.permission === 'granted') await subscribePush();
   } catch {}
 }
 
@@ -1251,7 +1254,8 @@ function showReminderToast(rem){
   const waText = is24h
     ? `שלום ${rem.fullName}! 😊 תזכורת לתורך מחר ב-${rem.time} במספרת DALOR. מחכים לך! 💈`
     : `שלום ${rem.fullName}! ⏰ תזכורת – התור שלך במספרת DALOR בעוד כ-30 דקות, ב-${rem.time}. ניפגש בקרוב! 💈`;
-  const waLink = `https://wa.me/${rem.phone.replace(/\D/g,'')}?text=${encodeURIComponent(waText)}`;
+  const _remDig = rem.phone.replace(/\D/g,'');
+  const waLink = `https://wa.me/${_remDig.startsWith('0')?'972'+_remDig.slice(1):_remDig}?text=${encodeURIComponent(waText)}`;
 
   const safeKey = key.replace(/[^a-zA-Z0-9]/g,'-');
   const toast = document.createElement('div');
