@@ -1,18 +1,24 @@
 require('dotenv').config();
 const express    = require('express');
-const fs         = require('fs/promises');
 const path       = require('path');
 const cron       = require('node-cron');
 const nodemailer = require('nodemailer');
 const webpush    = require('web-push');
+const admin      = require('firebase-admin');
+
+// ── Firebase / Firestore ─────────────────────────────────────────
+admin.initializeApp({
+  credential: admin.credential.cert({
+    type: 'service_account',
+    project_id:   process.env.FIREBASE_PROJECT_ID,
+    private_key:  (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+    client_email: process.env.FIREBASE_CLIENT_EMAIL,
+  }),
+});
+const db = admin.firestore();
 
 const app      = express();
 const PORT     = process.env.PORT || 3020;
-const DATA_DIR = path.join(__dirname, 'data');
-const APPT_FILE   = path.join(DATA_DIR, 'appointments.json');
-const BLOCK_FILE  = path.join(DATA_DIR, 'blocked.json');
-const SUBS_FILE   = path.join(DATA_DIR, 'subscriptions.json');
-const STATUS_FILE = path.join(DATA_DIR, 'day-status.json');
 const ADMIN_KEY  = process.env.ADMIN_KEY || '2810';
 
 const GMAIL_USER     = process.env.GMAIL_USER;
@@ -52,25 +58,51 @@ function makeRateLimit(windowMs, max, msg) {
   };
 }
 
-// Admin: 30 בקשות / 15 דקות
 const adminRateLimit = makeRateLimit(15 * 60 * 1000, 30, 'יותר מדי בקשות, נסה שוב בעוד 15 דקות');
-// הזמנת תור: 5 הזמנות / 10 דקות (מניעת ספאם)
 const bookRateLimit  = makeRateLimit(10 * 60 * 1000, 5,  'יותר מדי הזמנות, נסה שוב בעוד מעט');
-// בדיקת זמינות: 60 בקשות / דקה
 const availRateLimit = makeRateLimit(60 * 1000, 60, 'יותר מדי בקשות');
 
 app.use(express.json({ limit: '20kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-async function readJSON(file, fallback) {
-  try { return JSON.parse(await fs.readFile(file, 'utf8')); }
-  catch { return fallback; }
+// ── Firestore helpers ─────────────────────────────────────────────
+
+async function getAppointmentsByDate(date) {
+  const snap = await db.collection('appointments').where('date', '==', date).get();
+  return snap.docs.map(d => d.data());
 }
 
-async function writeJSON(file, data) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(file, JSON.stringify(data, null, 2));
+async function getAllAppointments() {
+  const snap = await db.collection('appointments').get();
+  return snap.docs.map(d => d.data());
 }
+
+async function addAppointment(appt) {
+  await db.collection('appointments').doc(appt.id).set(appt);
+}
+
+async function updateAppointment(id, updates) {
+  await db.collection('appointments').doc(id).update(updates);
+}
+
+async function deleteAppointment(id) {
+  await db.collection('appointments').doc(id).delete();
+}
+
+async function getConfig(key, fallback) {
+  try {
+    const doc = await db.collection('config').doc(key).get();
+    if (!doc.exists) return fallback;
+    const val = doc.data().value;
+    return val !== undefined ? val : fallback;
+  } catch { return fallback; }
+}
+
+async function setConfig(key, value) {
+  await db.collection('config').doc(key).set({ value });
+}
+
+// ─────────────────────────────────────────────────────────────────
 
 function clean(v, max) { return String(v || '').trim().replace(/\s+/g, ' ').slice(0, max); }
 
@@ -81,7 +113,6 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// All /api/admin/* routes get rate limiting + auth
 app.use('/api/admin', adminRateLimit, requireAdmin);
 
 // ── Push notifications ───────────────────────────────────────────
@@ -91,7 +122,7 @@ async function sendPush(payload) {
     console.warn('[Push] VAPID keys missing — skipping');
     return;
   }
-  const subs = await readJSON(SUBS_FILE, []);
+  const subs = await getConfig('subscriptions', []);
   console.log(`[Push] sending "${payload.title}" to ${subs.length} subscriber(s)`);
   if (!subs.length) return;
 
@@ -110,7 +141,7 @@ async function sendPush(payload) {
 
   if (dead.length) {
     const alive = subs.filter((_, i) => !dead.includes(i));
-    await writeJSON(SUBS_FILE, alive);
+    await setConfig('subscriptions', alive);
     console.log(`[Push] removed ${dead.length} dead subscription(s)`);
   }
 }
@@ -200,7 +231,7 @@ async function sendDailySummaryEmail(appts) {
       </thead>
       <tbody>${rows}</tbody>
     </table>
-    <a href="http://localhost:3020/admin.html" style="display:block;margin-top:20px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);color:#f0d783;text-decoration:none;padding:12px;border-radius:8px;text-align:center;font-weight:700;font-size:.95rem">פתח ממשק ניהול</a>
+    <a href="https://dalorbook.duckdns.org/admin.html" style="display:block;margin-top:20px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);color:#f0d783;text-decoration:none;padding:12px;border-radius:8px;text-align:center;font-weight:700;font-size:.95rem">פתח ממשק ניהול</a>
   </div>
 </div>`,
   });
@@ -213,44 +244,40 @@ const WINDOW_24H = { min: 82800000, max: 90000000 };
 const WINDOW_30M = { min: 1200000,  max: 2400000  };
 
 async function processDueReminders() {
-  const all = await readJSON(APPT_FILE, []);
+  const snap = await db.collection('appointments').where('status', '==', 'confirmed').get();
   const now = Date.now();
   const due = [];
-  let changed = false;
 
-  for (const appt of all) {
-    if (appt.status !== 'confirmed') continue;
+  await Promise.all(snap.docs.map(async (docSnap) => {
+    const appt = docSnap.data();
     const diff = new Date(`${appt.date}T${appt.time}:00`).getTime() - now;
+    const updates = {};
 
     if (!appt.reminderSent24h && diff >= WINDOW_24H.min && diff <= WINDOW_24H.max) {
-      appt.reminderSent24h = true;
-      appt.reminderSent24hAt = new Date().toISOString();
+      updates.reminderSent24h   = true;
+      updates.reminderSent24hAt = new Date().toISOString();
       due.push({ ...appt, reminderType: '24h' });
-      changed = true;
     }
     if (!appt.reminderSent30m && diff >= WINDOW_30M.min && diff <= WINDOW_30M.max) {
-      appt.reminderSent30m = true;
-      appt.reminderSent30mAt = new Date().toISOString();
+      updates.reminderSent30m   = true;
+      updates.reminderSent30mAt = new Date().toISOString();
       due.push({ ...appt, reminderType: '30m' });
-      changed = true;
     }
-  }
 
-  if (changed) await writeJSON(APPT_FILE, all);
+    if (Object.keys(updates).length) {
+      await docSnap.ref.update(updates);
+    }
+  }));
+
   return due;
 }
-
-// ── Cron: every minute — mark client reminders (toast shown in admin) ──
-// No email/push to Yair for 24h/30m — only admin toast triggers via /api/admin/due-reminders
-// (processDueReminders is called by the admin poll endpoint — no action needed here)
 
 // ── Cron: 08:00 daily — day summary ─────────────────────────────
 
 cron.schedule('0 8 * * *', async () => {
   try {
-    const today = new Date().toISOString().slice(0, 10);
-    const all   = await readJSON(APPT_FILE, []);
-    const todays = all.filter(a => a.date === today && a.status === 'confirmed');
+    const today  = new Date().toISOString().slice(0, 10);
+    const todays = (await getAppointmentsByDate(today)).filter(a => a.status === 'confirmed');
 
     if (todays.length) {
       const pushPayload = {
@@ -262,10 +289,7 @@ cron.schedule('0 8 * * *', async () => {
         tag: `daily-${today}`,
         url: '/admin.html',
       };
-      await Promise.allSettled([
-        sendPush(pushPayload),
-        sendDailySummaryEmail(todays),
-      ]);
+      await Promise.allSettled([sendPush(pushPayload), sendDailySummaryEmail(todays)]);
     } else {
       await sendPush({ title: 'DALOR — אין תורים היום 😌', body: '', tag: `daily-${today}`, url: '/admin.html' });
     }
@@ -283,17 +307,17 @@ app.get('/api/vapid-public', (req, res) => {
 app.get('/api/availability', availRateLimit, async (req, res) => {
   const { date } = req.query;
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Bad date' });
-  const all = await readJSON(APPT_FILE, []);
-  const booked = all.filter(a => a.date === date && a.status !== 'cancelled').map(a => a.time);
+  const appts  = await getAppointmentsByDate(date);
+  const booked = appts.filter(a => a.status !== 'cancelled').map(a => a.time);
   res.json({ booked });
 });
 
 app.get('/api/blocked', async (req, res) => {
-  res.json(await readJSON(BLOCK_FILE, []));
+  res.json(await getConfig('blocked', []));
 });
 
 app.get('/api/day-status', async (req, res) => {
-  res.json(await readJSON(STATUS_FILE, {}));
+  res.json(await getConfig('day-status', {}));
 });
 
 app.post('/api/appointments', bookRateLimit, async (req, res) => {
@@ -305,8 +329,8 @@ app.post('/api/appointments', bookRateLimit, async (req, res) => {
 
   if (!fullName || !phone || !date || !time) return res.status(400).json({ error: 'Missing fields' });
 
-  const all = await readJSON(APPT_FILE, []);
-  if (all.some(a => a.date === date && a.time === time && a.status !== 'cancelled'))
+  const existing = await getAppointmentsByDate(date);
+  if (existing.some(a => a.time === time && a.status !== 'cancelled'))
     return res.status(409).json({ error: 'Time already booked' });
 
   const appt = {
@@ -316,8 +340,7 @@ app.post('/api/appointments', bookRateLimit, async (req, res) => {
     createdAt: new Date().toISOString(),
     source: 'client',
   };
-  all.push(appt);
-  await writeJSON(APPT_FILE, all);
+  await addAppointment(appt);
   res.status(201).json({ ok: true, id: appt.id, date: appt.date, time: appt.time });
 
   sendPush({
@@ -336,24 +359,26 @@ app.post('/api/admin/push-subscribe', requireAdmin, async (req, res) => {
   const sub = req.body;
   if (!sub || !sub.endpoint) return res.status(400).json({ error: 'Bad subscription' });
 
-  const subs = await readJSON(SUBS_FILE, []);
-  const exists = subs.some(s => s.endpoint === sub.endpoint);
-  if (!exists) {
+  const subs = await getConfig('subscriptions', []);
+  if (!subs.some(s => s.endpoint === sub.endpoint)) {
     subs.push(sub);
-    await writeJSON(SUBS_FILE, subs);
+    await setConfig('subscriptions', subs);
   }
   res.json({ ok: true });
 });
 
 app.get('/api/admin/appointments', requireAdmin, async (req, res) => {
-  const all = await readJSON(APPT_FILE, []);
   const { date, from, to } = req.query;
-  let out = all;
-  if (date) out = out.filter(a => a.date === date);
-  else {
+  let out;
+
+  if (date) {
+    out = await getAppointmentsByDate(date);
+  } else {
+    out = await getAllAppointments();
     if (from) out = out.filter(a => a.date >= from);
     if (to)   out = out.filter(a => a.date <= to);
   }
+
   out.sort((a, b) => (`${a.date} ${a.time}`).localeCompare(`${b.date} ${b.time}`));
   res.json(out);
 });
@@ -367,8 +392,8 @@ app.post('/api/admin/appointments', requireAdmin, async (req, res) => {
 
   if (!fullName || !phone || !date || !time) return res.status(400).json({ error: 'Missing fields' });
 
-  const all = await readJSON(APPT_FILE, []);
-  if (all.some(a => a.date === date && a.time === time && a.status !== 'cancelled'))
+  const existing = await getAppointmentsByDate(date);
+  if (existing.some(a => a.time === time && a.status !== 'cancelled'))
     return res.status(409).json({ error: 'Time already booked' });
 
   const appt = {
@@ -378,29 +403,30 @@ app.post('/api/admin/appointments', requireAdmin, async (req, res) => {
     createdAt: new Date().toISOString(),
     source: 'admin',
   };
-  all.push(appt);
-  await writeJSON(APPT_FILE, all);
+  await addAppointment(appt);
   res.status(201).json(appt);
 });
 
 app.patch('/api/admin/appointments/:id', requireAdmin, async (req, res) => {
-  const all = await readJSON(APPT_FILE, []);
-  const idx = all.findIndex(a => a.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  const { id } = req.params;
   const { status } = req.body;
   if (!['confirmed', 'completed', 'cancelled'].includes(status)) return res.status(400).json({ error: 'Bad status' });
-  all[idx].status = status;
-  all[idx].updatedAt = new Date().toISOString();
-  await writeJSON(APPT_FILE, all);
-  res.json(all[idx]);
+
+  const docRef = db.collection('appointments').doc(id);
+  const doc    = await docRef.get();
+  if (!doc.exists) return res.status(404).json({ error: 'Not found' });
+
+  const updatedAt = new Date().toISOString();
+  await docRef.update({ status, updatedAt });
+  res.json({ ...doc.data(), status, updatedAt });
 });
 
 app.delete('/api/admin/appointments/:id', requireAdmin, async (req, res) => {
-  let all = await readJSON(APPT_FILE, []);
-  const idx = all.findIndex(a => a.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  all.splice(idx, 1);
-  await writeJSON(APPT_FILE, all);
+  const { id } = req.params;
+  const docRef = db.collection('appointments').doc(id);
+  const doc    = await docRef.get();
+  if (!doc.exists) return res.status(404).json({ error: 'Not found' });
+  await docRef.delete();
   res.json({ ok: true });
 });
 
@@ -411,11 +437,12 @@ app.get('/api/admin/due-reminders', requireAdmin, async (req, res) => {
 
 app.put('/api/admin/blocked', requireAdmin, async (req, res) => {
   if (!Array.isArray(req.body)) return res.status(400).json({ error: 'Expected array' });
-  await writeJSON(BLOCK_FILE, req.body);
+  await setConfig('blocked', req.body);
   res.json({ ok: true });
 });
 
 // ── Day Status (admin) ───────────────────────────────────────────
+
 app.put('/api/admin/day-status', async (req, res) => {
   const date = clean(req.body.date || '', 10);
   const type = clean(req.body.type || '', 20);
@@ -423,24 +450,26 @@ app.put('/api/admin/day-status', async (req, res) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Bad date' });
   const valid = ['vacation','phone_only','walkin_only','closed','busy','custom'];
   if (!valid.includes(type)) return res.status(400).json({ error: 'Bad type' });
-  const all = await readJSON(STATUS_FILE, {});
+
+  const all = await getConfig('day-status', {});
   all[date] = { type, ...(note && { note }) };
-  await writeJSON(STATUS_FILE, all);
+  await setConfig('day-status', all);
   res.json({ ok: true });
 });
 
 app.delete('/api/admin/day-status/:date', async (req, res) => {
   const date = req.params.date;
-  const all = await readJSON(STATUS_FILE, {});
+  const all  = await getConfig('day-status', {});
   delete all[date];
-  await writeJSON(STATUS_FILE, all);
+  await setConfig('day-status', all);
   res.json({ ok: true });
 });
 
 app.listen(PORT, () => {
   console.log(`\n✦ DALOR Barber Studio — http://localhost:${PORT}`);
-  console.log(`✦ Admin:  http://localhost:${PORT}/admin.html`);
-  console.log(`✦ Key:    ${ADMIN_KEY}`);
-  console.log(`✦ Email:  ${GMAIL_USER ? `✅ ${GMAIL_USER}` : '⚠️  לא מוגדר (.env)'}`);
-  console.log(`✦ Push:   ${VAPID_PUBLIC ? '✅ מוגדר' : '⚠️  לא מוגדר (.env)'}\n`);
+  console.log(`✦ Admin:     http://localhost:${PORT}/admin.html`);
+  console.log(`✦ Key:       ${ADMIN_KEY}`);
+  console.log(`✦ Email:     ${GMAIL_USER ? `✅ ${GMAIL_USER}` : '⚠️  לא מוגדר (.env)'}`);
+  console.log(`✦ Push:      ${VAPID_PUBLIC ? '✅ מוגדר' : '⚠️  לא מוגדר (.env)'}`);
+  console.log(`✦ Firebase:  ${process.env.FIREBASE_PROJECT_ID ? `✅ ${process.env.FIREBASE_PROJECT_ID}` : '⚠️  לא מוגדר (.env)'}\n`);
 });
