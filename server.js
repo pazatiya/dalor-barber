@@ -311,6 +311,13 @@ app.post('/api/appointments', bookRateLimit, async (req, res) => {
   all.push(appt);
   await writeJSON(APPT_FILE, all);
   res.status(201).json({ ok: true, id: appt.id, date: appt.date, time: appt.time });
+
+  sendPush({
+    title: `💈 תור חדש — ${appt.fullName}`,
+    body: `${appt.date} · ${appt.time}`,
+    tag: `new-${appt.id}`,
+    url: '/admin.html',
+  });
 });
 
 // ── Admin ────────────────────────────────────────────────────────
