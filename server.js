@@ -58,7 +58,7 @@ function makeRateLimit(windowMs, max, msg) {
   };
 }
 
-const adminRateLimit = makeRateLimit(15 * 60 * 1000, 30, 'יותר מדי בקשות, נסה שוב בעוד 15 דקות');
+const adminRateLimit = makeRateLimit(15 * 60 * 1000, 300, 'יותר מדי בקשות, נסה שוב בעוד 15 דקות');
 const bookRateLimit  = makeRateLimit(10 * 60 * 1000, 5,  'יותר מדי הזמנות, נסה שוב בעוד מעט');
 const availRateLimit = makeRateLimit(60 * 1000, 60, 'יותר מדי בקשות');
 
@@ -309,7 +309,9 @@ app.get('/api/availability', availRateLimit, async (req, res) => {
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Bad date' });
   const appts  = await getAppointmentsByDate(date);
   const booked = appts.filter(a => a.status !== 'cancelled').map(a => a.time);
-  res.json({ booked });
+  const dayStatus = await getConfig('day-status', {});
+  const closeAt = dayStatus[date]?.closeAt || null;
+  res.json({ booked, ...(closeAt && { closeAt }) });
 });
 
 app.get('/api/blocked', async (req, res) => {
@@ -444,15 +446,17 @@ app.put('/api/admin/blocked', requireAdmin, async (req, res) => {
 // ── Day Status (admin) ───────────────────────────────────────────
 
 app.put('/api/admin/day-status', async (req, res) => {
-  const date = clean(req.body.date || '', 10);
-  const type = clean(req.body.type || '', 20);
-  const note = clean(req.body.note || '', 200);
+  const date    = clean(req.body.date    || '', 10);
+  const type    = clean(req.body.type    || '', 20);
+  const note    = clean(req.body.note    || '', 200);
+  const closeAt = clean(req.body.closeAt || '', 5);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Bad date' });
-  const valid = ['vacation','phone_only','walkin_only','closed','busy','custom'];
+  const valid = ['vacation','phone_only','walkin_only','closed','busy','custom','close_at'];
   if (!valid.includes(type)) return res.status(400).json({ error: 'Bad type' });
+  if (closeAt && !/^\d{2}:\d{2}$/.test(closeAt)) return res.status(400).json({ error: 'Bad closeAt' });
 
   const all = await getConfig('day-status', {});
-  all[date] = { type, ...(note && { note }) };
+  all[date] = { type, ...(note && { note }), ...(closeAt && { closeAt }) };
   await setConfig('day-status', all);
   res.json({ ok: true });
 });

@@ -397,6 +397,7 @@ img{display:block}
 .dsb-closed{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3);color:#fca5a5}
 .dsb-busy{background:rgba(249,115,22,.08);border-color:rgba(249,115,22,.3);color:#fdba74}
 .dsb-custom{background:rgba(148,163,184,.08);border-color:rgba(148,163,184,.3);color:#cbd5e1}
+.dsb-close_at{background:rgba(234,179,8,.08);border-color:rgba(234,179,8,.3);color:#fde68a}
 /* ── Status nav button ─────────────────────── */
 #statusbtn{
   background:var(--s2);border:1px solid var(--bd);border-radius:var(--rs);
@@ -559,9 +560,11 @@ img{display:block}
       <button class="sm-opt" data-type="walkin_only"><span class="sm-opt-icon">🚶</span><span class="sm-opt-label">הגעה ישירה</span></button>
       <button class="sm-opt" data-type="closed"><span class="sm-opt-icon">🔒</span><span class="sm-opt-label">סגור</span></button>
       <button class="sm-opt" data-type="busy"><span class="sm-opt-icon">⚠️</span><span class="sm-opt-label">מלא — אין מקום</span></button>
+      <button class="sm-opt" data-type="close_at"><span class="sm-opt-icon">⏰</span><span class="sm-opt-label">עובדים עד שעה</span></button>
       <button class="sm-opt" data-type="custom" style="grid-column:span 3"><span class="sm-opt-icon">✏️</span><span class="sm-opt-label">הודעה מותאמת</span></button>
     </div>
     <input id="smNote" class="sm-note hidden" type="text" placeholder="הודעה ללקוחות… (עד 200 תווים)" maxlength="200" dir="rtl"/>
+    <input id="smCloseAt" class="sm-note hidden" type="time" min="08:00" max="20:00" step="1200" style="text-align:center;direction:ltr" placeholder="14:00"/>
     <div class="sm-btns">
       <button id="smSave" class="sm-save" onclick="saveStatus()">שמור</button>
       <button class="sm-cancel" onclick="closeStatusModal()">ביטול</button>
@@ -682,12 +685,13 @@ function statusLabel(s){
 // STATUS CONFIG
 // ════════════════════════════════════════════
 const STATUS_CFG = {
-  vacation:    { icon:'🏖️', label:'חופשה',          msg:'יאיר בחופשה — לא ניתן לקבוע תור' },
-  phone_only:  { icon:'📞', label:'טלפוניים בלבד',  msg:'ניתן לקבוע תור בטלפון בלבד' },
-  walkin_only: { icon:'🚶', label:'הגעה ישירה',      msg:'הגעה ישירה למספרה בלבד ביום זה' },
-  closed:      { icon:'🔒', label:'סגור',             msg:'המספרה סגורה ביום זה' },
-  busy:        { icon:'⚠️', label:'מלא — אין מקום', msg:'ההזמנות ליום זה מלאות' },
-  custom:      { icon:'✏️', label:'הודעה מותאמת',    msg:'' },
+  vacation:    { icon:'🏖️', label:'חופשה',              msg:'יאיר בחופשה — לא ניתן לקבוע תור' },
+  phone_only:  { icon:'📞', label:'טלפוניים בלבד',      msg:'ניתן לקבוע תור בטלפון בלבד' },
+  walkin_only: { icon:'🚶', label:'הגעה ישירה',          msg:'הגעה ישירה למספרה בלבד ביום זה' },
+  closed:      { icon:'🔒', label:'סגור',                 msg:'המספרה סגורה ביום זה' },
+  busy:        { icon:'⚠️', label:'מלא — אין מקום',     msg:'ההזמנות ליום זה מלאות' },
+  close_at:    { icon:'⏰', label:'עובדים עד שעה',       msg:'קביעת תורים סגורה החל מ-' },
+  custom:      { icon:'✏️', label:'הודעה מותאמת',        msg:'' },
 };
 
 // ════════════════════════════════════════════
@@ -904,7 +908,10 @@ function renderAppts(){
     const banner = document.createElement('div');
     banner.id = 'dayStatusBanner';
     banner.className = `dsb dsb-${dayStatus.type}`;
-    banner.innerHTML = `<span class="dsb-icon">${cfg.icon||'📋'}</span><span class="dsb-text">${dayStatus.note || cfg.label}</span><span class="dsb-change">שנה ›</span>`;
+    const bannerText = dayStatus.type === 'close_at'
+      ? `עובדים עד ${dayStatus.closeAt}`
+      : (dayStatus.note || cfg.label);
+    banner.innerHTML = `<span class="dsb-icon">${cfg.icon||'📋'}</span><span class="dsb-text">${bannerText}</span><span class="dsb-change">שנה ›</span>`;
     banner.onclick = () => openStatusModal(A.curDate);
     list.before(banner);
   }
@@ -1006,6 +1013,8 @@ function openStatusModal(ds){
   document.getElementById('smDate').textContent = fmtShort(ds);
   document.getElementById('smNote').classList.add('hidden');
   document.getElementById('smNote').value = '';
+  document.getElementById('smCloseAt').classList.add('hidden');
+  document.getElementById('smCloseAt').value = '';
 
   // Pre-select current status
   const cur = A.dayStatus[ds];
@@ -1015,6 +1024,7 @@ function openStatusModal(ds){
       btn.classList.add('sm-sel');
       A._smType = cur.type;
       if(cur.note){ document.getElementById('smNote').value=cur.note; document.getElementById('smNote').classList.remove('hidden'); }
+      if(cur.closeAt){ document.getElementById('smCloseAt').value=cur.closeAt; document.getElementById('smCloseAt').classList.remove('hidden'); }
     }
     if(!cur && btn.dataset.type==='open') btn.classList.add('sm-open-sel');
   });
@@ -1027,22 +1037,23 @@ function closeStatusModal(){
 }
 
 async function saveStatus(){
-  const ds = A._smDate;
-  const type = A._smType;
-  const note = document.getElementById('smNote').value.trim();
+  const ds      = A._smDate;
+  const type    = A._smType;
+  const note    = document.getElementById('smNote').value.trim();
+  const closeAt = document.getElementById('smCloseAt').value;
 
   if(!type || type==='open'){
     // Remove status (open = no restriction)
     try{ await adminFetch(`/api/admin/day-status/${ds}`, {method:'DELETE'}); }catch{}
     delete A.dayStatus[ds];
   } else {
+    if(type === 'close_at' && !closeAt){ alert('נא לבחור שעה סגירה'); return; }
+    const body = { date:ds, type, ...(note&&{note}), ...(type==='close_at'&&closeAt&&{closeAt}) };
     try{
-      const r = await adminFetch('/api/admin/day-status', {
-        method:'PUT', body: JSON.stringify({date:ds, type, ...(note&&{note})})
-      });
+      const r = await adminFetch('/api/admin/day-status', { method:'PUT', body: JSON.stringify(body) });
       if(!r.ok) return;
     }catch{ return; }
-    A.dayStatus[ds] = {type, ...(note&&{note})};
+    A.dayStatus[ds] = { type, ...(note&&{note}), ...(type==='close_at'&&closeAt&&{closeAt}) };
   }
 
   const btn = document.getElementById('statusbtn');
@@ -1059,9 +1070,12 @@ function initStatusOpts(){
       A._smType = t;
       document.querySelectorAll('.sm-opt').forEach(b=>b.classList.remove('sm-sel','sm-open-sel'));
       btn.classList.add(t==='open'?'sm-open-sel':'sm-sel');
-      const noteEl = document.getElementById('smNote');
-      if(t==='custom'){ noteEl.classList.remove('hidden'); noteEl.focus(); }
-      else noteEl.classList.add('hidden');
+      const noteEl    = document.getElementById('smNote');
+      const closeAtEl = document.getElementById('smCloseAt');
+      noteEl.classList.add('hidden');
+      closeAtEl.classList.add('hidden');
+      if(t==='custom')   { noteEl.classList.remove('hidden');    noteEl.focus(); }
+      if(t==='close_at') { closeAtEl.classList.remove('hidden'); closeAtEl.focus(); }
     });
   });
   // Close on backdrop click

@@ -727,7 +727,7 @@ const STATUS_CFG = {
   custom:      { icon:'📋', title:'הודעה מיאיר',           text:'' },
 };
 
-const S = { step:1, calY:new Date().getFullYear(), calM:new Date().getMonth(), date:null, time:null, booked:[], blocked:new Set(), dayStatus:{} };
+const S = { step:1, calY:new Date().getFullYear(), calM:new Date().getMonth(), date:null, time:null, booked:[], blocked:new Set(), dayStatus:{}, closeAt:null };
 
 // ── Home → App transition ────────────────────────
 document.getElementById('enterBtn').addEventListener('click', () => {
@@ -788,7 +788,7 @@ function renderCal(){
 
 async function onDate(ds){
   S.date=ds; S.time=null; renderCal();
-  try{ S.booked=(await (await fetch(`/api/availability?date=${ds}`)).json()).booked||[]; }catch{ S.booked=[]; }
+  try{ const av=await (await fetch(`/api/availability?date=${ds}`)).json(); S.booked=av.booked||[]; S.closeAt=av.closeAt||null; }catch{ S.booked=[]; S.closeAt=null; }
   renderTime(ds); go(2);
 }
 
@@ -800,7 +800,7 @@ function renderTime(ds){
 
   // Check day status
   const dst = S.dayStatus[ds];
-  if(dst){
+  if(dst && dst.type !== 'close_at'){
     const cfg = STATUS_CFG[dst.type] || {};
     const displayText = dst.type==='custom' ? (dst.note||'יאיר הגדיר הודעה מיוחדת ליום זה') : cfg.text;
     const waLink = `https://wa.me/${WA}?text=${encodeURIComponent('שלום יאיר! אני רוצה לקבוע תור 💈')}`;
@@ -819,7 +819,7 @@ function renderTime(ds){
   const slots=getSlots(ds);
   if(!slots.length){ empty.classList.remove('hidden'); return; }
   slots.forEach(t=>{
-    const bkd=S.booked.includes(t);
+    const bkd=S.booked.includes(t)||(S.closeAt&&t>=S.closeAt);
     const btn=document.createElement('button');
     btn.type='button';
     btn.className='ts'+(bkd?' bkd':'')+(t===S.time?' sel':'');
@@ -871,7 +871,7 @@ function buildConfirm(a,name,phone,notes){
 }
 
 function resetApp(){
-  S.date=null; S.time=null; S.booked=[];
+  S.date=null; S.time=null; S.booked=[]; S.closeAt=null;
   ['fname','fphone','fnotes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ferr').textContent='';
   go(1); renderCal();
