@@ -474,4 +474,13 @@ app.listen(PORT, () => {
   console.log(`✦ Email:     ${GMAIL_USER ? `✅ ${GMAIL_USER}` : '⚠️  לא מוגדר (.env)'}`);
   console.log(`✦ Push:      ${VAPID_PUBLIC ? '✅ מוגדר' : '⚠️  לא מוגדר (.env)'}`);
   console.log(`✦ Firebase:  ${process.env.FIREBASE_PROJECT_ID ? `✅ ${process.env.FIREBASE_PROJECT_ID}` : '⚠️  לא מוגדר (.env)'}\n`);
+
+  const duckToken = process.env.DUCKDNS_TOKEN;
+  const duckDomain = process.env.DUCKDNS_DOMAIN || 'dalorbook';
+  if (duckToken) {
+    fetch(`https://www.duckdns.org/update?domains=${duckDomain}&token=${duckToken}&ip=`)
+      .then(r => r.text())
+      .then(t => console.log(`✦ DuckDNS:   ${t.trim() === 'OK' ? '✅ IP עודכן' : '⚠️ ' + t}`))
+      .catch(e => console.log('✦ DuckDNS:   ⚠️ שגיאה:', e.message));
+  }
 });
