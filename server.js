@@ -7,8 +7,11 @@ const webpush    = require('web-push');
 const admin      = require('firebase-admin');
 
 // ── Firebase / Firestore ─────────────────────────────────────────
+const firebaseCredential = process.env.FIREBASE_SERVICE_ACCOUNT
+  ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+  : require('./firebase-key.json');
 admin.initializeApp({
-  credential: admin.credential.cert(require('./firebase-key.json')),
+  credential: admin.credential.cert(firebaseCredential),
 });
 const db = admin.firestore();
 
