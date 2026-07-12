@@ -473,7 +473,7 @@ app.listen(PORT, () => {
   console.log(`✦ Key:       ${ADMIN_KEY}`);
   console.log(`✦ Email:     ${GMAIL_USER ? `✅ ${GMAIL_USER}` : '⚠️  לא מוגדר (.env)'}`);
   console.log(`✦ Push:      ${VAPID_PUBLIC ? '✅ מוגדר' : '⚠️  לא מוגדר (.env)'}`);
-  console.log(`✦ Firebase:  ${process.env.FIREBASE_PROJECT_ID ? `✅ ${process.env.FIREBASE_PROJECT_ID}` : '⚠️  לא מוגדר (.env)'}\n`);
+  console.log(`✦ Firebase:  ${(process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_PROJECT_ID) ? '✅ מחובר' : '⚠️  לא מוגדר (.env)'}\n`);
 
   const duckToken = process.env.DUCKDNS_TOKEN;
   const duckDomain = process.env.DUCKDNS_DOMAIN || 'dalorbook';
