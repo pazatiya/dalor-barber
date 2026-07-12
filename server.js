@@ -478,7 +478,9 @@ app.listen(PORT, () => {
   const duckToken = process.env.DUCKDNS_TOKEN;
   const duckDomain = process.env.DUCKDNS_DOMAIN || 'dalorbook';
   if (duckToken) {
-    fetch(`https://www.duckdns.org/update?domains=${duckDomain}&token=${duckToken}&ip=`)
+    fetch('https://api.ipify.org?format=json')
+      .then(r => r.json())
+      .then(({ ip }) => fetch(`https://www.duckdns.org/update?domains=${duckDomain}&token=${duckToken}&ip=${ip}`))
       .then(r => r.text())
       .then(t => console.log(`✦ DuckDNS:   ${t.trim() === 'OK' ? '✅ IP עודכן' : '⚠️ ' + t}`))
       .catch(e => console.log('✦ DuckDNS:   ⚠️ שגיאה:', e.message));
