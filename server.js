@@ -275,7 +275,7 @@ async function processDueReminders() {
   return due;
 }
 
-// ── Cron: 08:00 daily — day summary ─────────────────────────────
+// ── Cron: 08:00 ראשון–שישי — סיכום היום (לא בשבת) ───────────────
 
 async function sendDailySummary() {
   const today  = todayInIsrael();
@@ -299,7 +299,8 @@ async function sendDailySummary() {
   return todays.length;
 }
 
-cron.schedule('0 8 * * *', () => {
+// 0-5 = ראשון עד שישי (6 = שבת, מדולג)
+cron.schedule('0 8 * * 0-5', () => {
   sendDailySummary().catch(err => console.error('Cron daily error:', err.message));
 }, { timezone: TZ });
 
