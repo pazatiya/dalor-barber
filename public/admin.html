@@ -1189,7 +1189,7 @@ function updateBellState() {
   if (perm === 'granted') {
     btn.classList.add('on');
     btn.classList.remove('needs-perm');
-    btn.title = 'התראות פעילות ✓';
+    btn.title = 'התראות פעילות ✓ — לחץ לשליחת התראת בדיקה';
   } else if (perm === 'denied') {
     btn.classList.remove('on', 'needs-perm');
     btn.title = 'התראות חסומות — אפשר בהגדרות הדפדפן';
@@ -1206,8 +1206,15 @@ async function togglePush() {
     alert('התראות חסומות — כנס להגדרות הדפדפן ואפשר אותן ידנית'); return;
   }
   if (Notification.permission === 'granted') {
-    // Already granted — re-subscribe silently (or just confirm)
+    // כבר מאושר — רישום מחדש + שליחת התראת בדיקה עכשיו
     await subscribePush();
+    try {
+      const r = await adminFetch('/api/admin/test-daily-summary', { method: 'POST' });
+      const j = await r.json();
+      alert(r.ok
+        ? `נשלחה התראת בדיקה (${j.appointments} תורים היום). אמורה להופיע תוך כמה שניות.`
+        : 'הרישום עודכן, אך שליחת הבדיקה נכשלה.');
+    } catch { alert('הרישום עודכן. אם לא מגיעה התראה — סגור ופתח מחדש את האפליקציה.'); }
     return;
   }
   const result = await Notification.requestPermission();

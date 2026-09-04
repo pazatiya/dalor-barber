@@ -19,6 +19,11 @@ const app      = express();
 const PORT     = process.env.PORT || 3020;
 const ADMIN_KEY  = process.env.ADMIN_KEY || '2810';
 
+// ── Timezone ─────────────────────────────────────────────────────
+// כל התזמונים והתאריכים לפי שעון ישראל, לא לפי שעון השרת (UTC)
+const TZ = 'Asia/Jerusalem';
+const todayInIsrael = () => new Date().toLocaleDateString('sv-SE', { timeZone: TZ }); // YYYY-MM-DD
+
 const GMAIL_USER     = process.env.GMAIL_USER;
 const GMAIL_PASS     = process.env.GMAIL_PASS;
 const REMINDER_EMAIL = process.env.REMINDER_EMAIL || GMAIL_USER;
@@ -272,29 +277,31 @@ async function processDueReminders() {
 
 // ── Cron: 08:00 daily — day summary ─────────────────────────────
 
-cron.schedule('0 8 * * *', async () => {
-  try {
-    const today  = new Date().toISOString().slice(0, 10);
-    const todays = (await getAppointmentsByDate(today)).filter(a => a.status === 'confirmed');
+async function sendDailySummary() {
+  const today  = todayInIsrael();
+  const todays = (await getAppointmentsByDate(today)).filter(a => a.status === 'confirmed');
+  console.log(`[Cron] daily summary for ${today} — ${todays.length} appointment(s)`);
 
-    if (todays.length) {
-      const pushPayload = {
-        title: `📋 ${todays.length} תורים היום`,
-        body: todays
-          .sort((a,b) => a.time.localeCompare(b.time))
-          .map(a => `${a.time} ${a.fullName}`)
-          .join(' · '),
-        tag: `daily-${today}`,
-        url: '/admin.html',
-      };
-      await Promise.allSettled([sendPush(pushPayload), sendDailySummaryEmail(todays)]);
-    } else {
-      await sendPush({ title: 'DALOR — אין תורים היום 😌', body: '', tag: `daily-${today}`, url: '/admin.html' });
-    }
-  } catch (err) {
-    console.error('Cron daily error:', err.message);
+  if (todays.length) {
+    const pushPayload = {
+      title: `📋 ${todays.length} תורים היום`,
+      body: todays
+        .sort((a,b) => a.time.localeCompare(b.time))
+        .map(a => `${a.time} ${a.fullName}`)
+        .join(' · '),
+      tag: `daily-${today}`,
+      url: '/admin.html',
+    };
+    await Promise.allSettled([sendPush(pushPayload), sendDailySummaryEmail(todays)]);
+  } else {
+    await sendPush({ title: 'DALOR — אין תורים היום 😌', body: '', tag: `daily-${today}`, url: '/admin.html' });
   }
-});
+  return todays.length;
+}
+
+cron.schedule('0 8 * * *', () => {
+  sendDailySummary().catch(err => console.error('Cron daily error:', err.message));
+}, { timezone: TZ });
 
 // ── Public ──────────────────────────────────────────────────────
 
@@ -365,6 +372,17 @@ app.post('/api/admin/push-subscribe', requireAdmin, async (req, res) => {
     await setConfig('subscriptions', subs);
   }
   res.json({ ok: true });
+});
+
+// שליחת סיכום היום עכשיו (לבדיקה שההתראות עובדות, בלי לחכות ל-8:00)
+app.post('/api/admin/test-daily-summary', requireAdmin, async (req, res) => {
+  try {
+    const count = await sendDailySummary();
+    res.json({ ok: true, appointments: count });
+  } catch (err) {
+    console.error('[test-daily-summary]', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/admin/appointments', requireAdmin, async (req, res) => {
