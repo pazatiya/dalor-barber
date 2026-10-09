@@ -2,8 +2,8 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
-<meta name="theme-color" content="#09090c"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="theme-color" content="#111111"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="DALOR ניהול"/>
@@ -515,18 +515,23 @@ h4{font-size:.8rem;color:var(--gold);margin:14px 0 6px}
 .field input[type=time],.field input[type=date]{direction:ltr;text-align:right}
 @media(min-width:520px){#tabs{max-width:520px}}
 </style>
+<link rel="stylesheet" href="/admin-ui.css"/>
+<link rel="stylesheet" href="/dalor-visual.css"/>
 </head>
 <body>
 
 <!-- ═══════════ LOGIN ═══════════ -->
-<div id="login">
+<div id="login" class="dalor-staff-intro">
+  <div class="staff-scene cinematic-media" aria-hidden="true"><img src="/generated/dalor-staff-editorial-v1.webp" alt="" fetchpriority="high" decoding="async" width="1536" height="1024"/></div>
+  <div class="staff-shade" aria-hidden="true"></div>
   <div class="login-card">
     <img class="lc-logo" src="/logo.jpg" alt="DALOR"/>
-    <div class="lc-name">DALOR</div>
-    <div class="lc-sub">ממשק ניהול מספרה</div>
-    <input id="keyinput" class="lc-input" type="password" placeholder="מפתח כניסה" autocomplete="current-password"/>
+    <h1 class="lc-name">ניהול המספרה</h1>
+    <div class="lc-sub">DALOR | הבית לגבר</div>
+    <label for="keyinput" class="login-label">קוד כניסה אישי</label>
+    <input id="keyinput" class="lc-input" type="password" placeholder="הקוד שלך" autocomplete="current-password" aria-describedby="loginerr"/>
     <button id="loginbtn" class="lc-btn">כניסה לממשק</button>
-    <div id="loginerr" class="lc-err"></div>
+    <div id="loginerr" class="lc-err" role="alert"></div>
   </div>
 </div>
 
@@ -538,26 +543,28 @@ h4{font-size:.8rem;color:var(--gold);margin:14px 0 6px}
     <div class="ahbrand">
       <img class="ahlogo" src="/logo.jpg" alt="DALOR"/>
       <div>
-        <div class="ahname">DALOR</div>
+        <div class="ahname">הבית לגבר</div>
         <div class="ahsub">ממשק ניהול</div>
       </div>
     </div>
     <div class="ahright">
       <span id="aclock"></span>
-      <button id="bellbtn" title="התראות Push" onclick="togglePush()">
-        🔔<span class="bell-dot"></span>
+      <button id="bellbtn" title="התראות" aria-label="התראות" onclick="togglePush()">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="bell-dot"></span>
       </button>
       <button id="logoutbtn" class="logout-btn">יציאה</button>
     </div>
   </header>
 
-  <nav id="tabs">
-    <button data-view="day" class="on">יומן</button>
-    <button data-view="week">שבוע</button>
-    <button data-view="customers" data-admin>לקוחות</button>
-    <button data-view="outbox" data-admin>הודעות</button>
-    <button data-view="settings" data-admin>הגדרות</button>
+  <nav id="tabs" aria-label="ניווט במערכת הניהול">
+    <button data-view="day" class="on"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18M8 15h3"/></svg><span>יומן</span></button>
+    <button data-view="week"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18M8 15h1M12 15h1M16 15h1M8 18h1M12 18h1"/></svg><span>שבוע</span></button>
+    <button data-view="customers" data-admin><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>לקוחות</span></button>
+    <button data-view="outbox" data-admin><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9H13a8.5 8.5 0 0 1 8 8v.5Z"/></svg><span>הודעות</span></button>
+    <button data-view="settings" data-admin><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg><span>הגדרות</span></button>
   </nav>
+
+  <div class="admin-intro admin-editorial-banner"><div><p class="admin-eyebrow">DALOR / ניהול המספרה</p><h1 id="adminViewTitle">יומן המספרה</h1><p id="adminViewDescription">כל התורים במקום אחד</p></div></div>
 
   <div id="view-day">
   <!-- Day Navigator -->
@@ -567,7 +574,7 @@ h4{font-size:.8rem;color:var(--gold);margin:14px 0 6px}
       <div id="navdate">טוען…</div>
       <div style="display:flex;gap:6px;justify-content:center;margin-top:4px">
         <button id="todaybtn">חזרה להיום</button>
-        <button id="statusbtn" onclick="openStatusModal(A.curDate)">📅 סטטוס</button>
+        <button id="statusbtn" onclick="openStatusModal(A.curDate)">סטטוס יום</button>
       </div>
     </div>
     <button id="nextday" class="dnav-btn" aria-label="יום הבא">‹</button>
@@ -586,13 +593,13 @@ h4{font-size:.8rem;color:var(--gold);margin:14px 0 6px}
   <div id="view-settings" class="view hidden"></div>
 
   <!-- FAB -->
-  <button id="fab" aria-label="תור חדש">+</button>
+  <button id="fab" aria-label="קביעת תור חדש"><span aria-hidden="true">+</span><span class="fab-label">תור חדש</span></button>
 </div>
 
 <!-- ═══════════ ADD MODAL ═══════════ -->
 <div id="modal" class="hidden">
   <div class="msheet">
-    <div class="mhdr"><h3>תור חדש</h3><button class="mclose" id="closemodal">✕</button></div>
+    <div class="mhdr"><h3>תור חדש</h3><button class="mclose" id="closemodal" aria-label="סגירת תור חדש">✕</button></div>
     <div id="manualBody"></div>
   </div>
 </div>
@@ -600,7 +607,7 @@ h4{font-size:.8rem;color:var(--gold);margin:14px 0 6px}
 <!-- ═══════════ EDIT / HISTORY MODAL ═══════════ -->
 <div id="editModal" class="hidden">
   <div class="msheet">
-    <div class="mhdr"><h3>פרטי תור</h3><button class="mclose" id="closeedit">✕</button></div>
+    <div class="mhdr"><h3>פרטי תור</h3><button class="mclose" id="closeedit" aria-label="סגירת פרטי תור">✕</button></div>
     <div id="editBody"></div>
   </div>
 </div>
@@ -1048,5 +1055,6 @@ document.addEventListener('DOMContentLoaded', ()=>{ initStatusOpts(); });
 
 </script>
 <script src="/admin-v2.js"></script>
+<script src="/admin-ui.js"></script>
 </body>
 </html>

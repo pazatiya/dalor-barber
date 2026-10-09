@@ -1,4 +1,4 @@
-// ממשק ניהול v2: יומן לפי ספר, שבוע, עריכת תור, הזמנה ידנית, לקוחות, הודעות והגדרות.
+// ממשק ניהול v2: יומן משותף, שבוע לפי ימים, עריכת תור, הזמנה ידנית, לקוחות, הודעות והגדרות.
 // נטען אחרי הסקריפט הפנימי של admin.html (משתמש ב-A, adminFetch, toISO, fmtShort וכו').
 'use strict';
 
@@ -13,13 +13,11 @@ const ACTIONS = {
   cancelled:   [['confirmed', 'שחזור', 'undo']],
   no_show:     [['confirmed', 'שחזור', 'undo']],
 };
-const PALETTE = ['#c9a84c', '#60a5fa', '#a78bfa', '#34d399', '#fb923c', '#f472b6'];
 const DAYS_HE = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳'];
-Object.assign(A, { role: 'admin', barberId: null, cfg: null, barberFilter: 'all', dayMode: 'list', weekStart: null, view: 'day', setTab: 'general' });
+Object.assign(A, { role: 'admin', barberId: null, cfg: null, weekStart: null, view: 'day', setTab: 'general' });
 
 const isAdmin = () => A.role === 'admin';
 const bName = id => (A.cfg?.barbers || []).find(b => b.id === id)?.name || id || '';
-const bColor = id => PALETTE[Math.max(0, (A.cfg?.barbers || []).findIndex(b => b.id === id)) % PALETTE.length];
 const waLink = (phone, text) => { const d = String(phone).replace(/\D/g, ''); return `https://wa.me/${d.startsWith('0') ? '972' + d.slice(1) : d}${text ? '?text=' + encodeURIComponent(text) : ''}`; };
 const WA_ICON = '<svg style="width:13px;height:13px;fill:currentColor" viewBox="0 0 24 24"><path d="M12.05 0C5.5 0 .16 5.34.16 11.89c0 2.1.55 4.14 1.59 5.95L.06 24l6.3-1.65a11.88 11.88 0 005.69 1.45c6.55 0 11.89-5.34 11.89-11.89A11.82 11.82 0 0012.05 0z"/></svg>';
 
@@ -87,17 +85,7 @@ function setView(v) {
 }
 document.querySelectorAll('#tabs button').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
 
-function chipsHtml() {
-  if (!isAdmin()) return '';
-  const bs = (A.cfg.barbers || []).filter(b => b.active);
-  return `<button class="chip ${A.barberFilter === 'all' ? 'on' : ''}" data-bf="all">כל הספרים</button>` +
-    bs.map(b => `<button class="chip ${A.barberFilter === b.id ? 'on' : ''}" data-bf="${esc(b.id)}"><i style="background:${bColor(b.id)}"></i>${esc(b.name)}</button>`).join('');
-}
-function bindChips(el, after) {
-  el.querySelectorAll('[data-bf]').forEach(b => b.addEventListener('click', () => { A.barberFilter = b.dataset.bf; after(); }));
-}
-const visible = list => (isAdmin() && A.barberFilter !== 'all') ? list.filter(a => a.barberId === A.barberFilter) : list;
-
+// The operational diary is one queue. Server permissions still control which records are returned.
 // ── טעינה ────────────────────────────────────────────────
 async function loadDay() {
   document.getElementById('navdate').textContent = fmtShort(A.curDate);
@@ -125,10 +113,7 @@ async function loadAllStats() {
 function renderAppts() {
   const list = document.getElementById('apptlist');
   const tools = document.getElementById('dayTools');
-  tools.innerHTML = `<div class="chips">${chipsHtml()}</div>
-    <div class="seg"><button data-dm="list" class="${A.dayMode === 'list' ? 'on' : ''}">רשימה</button><button data-dm="cols" class="${A.dayMode === 'cols' ? 'on' : ''}">יומן לפי ספר</button></div>`;
-  bindChips(tools, renderAppts);
-  tools.querySelectorAll('[data-dm]').forEach(b => b.addEventListener('click', () => { A.dayMode = b.dataset.dm; renderAppts(); }));
+  tools.innerHTML = ''; tools.classList.add('hidden');
 
   document.getElementById('dayStatusBanner')?.remove();
   const st = A.dayStatus[A.curDate];
@@ -141,7 +126,7 @@ function renderAppts() {
     list.before(banner);
   }
 
-  const all = visible(A.appts);
+  const all = A.appts;
   const now = new Date(), cur = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   if (A.curDate === toISO(now)) {
     const next = all.find(a => a.time > cur && ['confirmed', 'pending'].includes(a.status));
@@ -153,12 +138,6 @@ function renderAppts() {
     const d = new Date(A.curDate + 'T12:00:00');
     const msg = d.getDay() === 6 ? 'שבת שלום 🕍' : CLOSED.has(A.curDate) ? 'יום חג — מספרה סגורה 🕎' : A.blocked.includes(A.curDate) ? 'יום חסום — מספרה סגורה' : st ? (STATUS_CFG[st.type]?.msg || st.note || 'סטטוס מיוחד') : 'אין תורים ביום זה';
     list.innerHTML = `<div class="empty-day"><div class="em-ico">📅</div><p>${esc(msg)}</p></div>`;
-    return;
-  }
-  if (A.dayMode === 'cols') {
-    const bs = isAdmin() ? (A.cfg.barbers || []).filter(b => b.active && (A.barberFilter === 'all' || A.barberFilter === b.id)) : [{ id: A.barberId, name: bName(A.barberId) }];
-    list.innerHTML = timeline(bs.map(b => ({ label: b.name, appts: all.filter(a => a.barberId === b.id) })));
-    bindTimeline(list);
     return;
   }
   list.innerHTML = '';
@@ -191,7 +170,6 @@ function apptCard(a) {
         ${meta ? `<div class="ameta">${meta}</div>` : ''}
         ${a.notes ? `<div class="anotes">${esc(a.notes)}</div>` : ''}
         <span class="astatus s-${status}">${STATUS_HE[status] || status}</span>
-        <span class="bbadge"><i style="background:${bColor(a.barberId)}"></i>${esc(bName(a.barberId))}</span>
         ${a.source === 'admin' ? '<span class="src-badge">✏️ נקבע ידנית</span>' : ''}
       </div>
     </div>
@@ -222,7 +200,7 @@ function timeline(cols) {
     const lanes = []; // לכל תור: נתיב, כדי שחפיפות (תצוגה "כל הספרים" בשבוע) לא יסתירו
     list.forEach(a => { let l = 0; while (lanes[l] && lanes[l] > a.startMin) l++; lanes[l] = a.endMin; a._lane = l; });
     const n = Math.max(1, lanes.length);
-    const blocks = list.map(a => `<div class="tl-a s-${esc(a.status)}" data-id="${esc(a.id)}" style="top:${px(a.startMin)}px;height:${Math.max(22, px(a.endMin) - px(a.startMin) - 1)}px;width:${100 / n}%;right:${a._lane * 100 / n}%;--c:${bColor(a.barberId)}">
+    const blocks = list.map(a => `<div class="tl-a s-${esc(a.status)}" data-id="${esc(a.id)}" style="top:${px(a.startMin)}px;height:${Math.max(22, px(a.endMin) - px(a.startMin) - 1)}px;width:${100 / n}%;right:${a._lane * 100 / n}%;--c:#B99A5E">
       <b>${esc(a.time)}</b> ${esc(a.fullName)}<br><span>${esc(a.serviceName || '')}</span></div>`).join('');
     return `<div class="tl-col"><div class="tl-hd" ${c.date ? `data-date="${c.date}"` : ''}>${esc(c.label)}${c.sub ? `<small>${esc(c.sub)}</small>` : ''}</div><div class="tl-body" style="height:${px(e)}px">${blocks}</div></div>`;
   }).join('');
@@ -240,14 +218,13 @@ async function loadWeek() {
   el.innerHTML = '<div class="empty-day"><p>טוען…</p></div>';
   const r = await api('GET', `/api/staff/appointments?from=${from}&to=${to}`);
   A.weekAppts = r.ok ? r.data : [];
-  const list = visible(A.weekAppts);
+  const list = A.weekAppts;
   const cols = DAYS_HE.map((d, i) => { const ds = addDays(from, i); const dd = new Date(ds + 'T12:00:00'); return { label: d, sub: `${dd.getDate()}/${dd.getMonth() + 1}`, date: ds, appts: list.filter(a => a.date === ds) }; });
   el.innerHTML = `<div class="wk-nav"><button class="dnav-btn" id="wkPrev">›</button><div class="wk-t">${fmtShort(from).replace(/^יום \S+, /, '')} – ${fmtShort(to).replace(/^יום \S+, /, '')}<br><button class="link" id="wkToday">השבוע הנוכחי</button></div><button class="dnav-btn" id="wkNext">‹</button></div>
-    <div class="chips" id="wkChips">${chipsHtml()}</div>${timeline(cols)}`;
+    ${timeline(cols)}`;
   document.getElementById('wkPrev').onclick = () => { A.weekStart = addDays(A.weekStart, -7); loadWeek(); };
   document.getElementById('wkNext').onclick = () => { A.weekStart = addDays(A.weekStart, 7); loadWeek(); };
   document.getElementById('wkToday').onclick = () => { A.weekStart = sundayOf(toISO(new Date())); loadWeek(); };
-  bindChips(document.getElementById('wkChips'), loadWeek);
   bindTimeline(el);
 }
 
@@ -267,7 +244,6 @@ function openEdit(id) {
     ${admin ? `
     <div class="field"><label>תאריך</label><input type="date" id="edDate" value="${esc(a.date)}"/></div>
     <div class="field"><label>שעה</label><input type="time" id="edTime" step="300" value="${esc(a.time)}"/></div>
-    <div class="field"><label>ספר</label><select id="edBarber">${(A.cfg.barbers || []).map(b => `<option value="${esc(b.id)}" ${b.id === a.barberId ? 'selected' : ''}>${esc(b.name)}${b.active ? '' : ' (לא פעיל)'}</option>`).join('')}</select></div>
     <div class="field"><label>שירות</label><select id="edSvc">${svc.map(s => `<option value="${esc(s.id)}" ${s.id === a.serviceId ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
     <div class="field"><label>תוספות</label><div class="checks">${adds.map(x => `<label><input type="checkbox" class="edAdd" value="${esc(x.id)}" ${(a.addonIds || []).includes(x.id) ? 'checked' : ''}/> ${esc(x.name)}</label>`).join('')}</div></div>
     ${hasHc ? `<div class="field"><label>סוג תספורת</label><select id="edHc"><option value="regular" ${a.haircutType !== 'special' ? 'selected' : ''}>רגילה</option><option value="special" ${a.haircutType === 'special' ? 'selected' : ''}>מיוחדת / עיצוב מורכב</option></select></div>` : ''}
@@ -288,7 +264,6 @@ function openEdit(id) {
     const v = (id) => document.getElementById(id)?.value;
     if (v('edDate') !== a.date) patch.date = v('edDate');
     if (v('edTime') !== a.time) patch.time = v('edTime');
-    if (v('edBarber') !== a.barberId) patch.barberId = v('edBarber');
     const addons = [...document.querySelectorAll('.edAdd:checked')].map(x => x.value);
     const hc = v('edHc');
     if (v('edSvc') !== a.serviceId || addons.join() !== [...(a.addonIds || [])].join() || (hc && hc !== (a.haircutType || 'regular'))) {
@@ -327,7 +302,7 @@ function closeModal() { document.getElementById('modal').classList.add('hidden')
 function renderManual() {
   const svcs = A.cfg.services.filter(s => s.active), adds = A.cfg.addons.filter(s => s.active);
   const keep = id => document.getElementById(id)?.value ?? '';
-  const prev = { date: keep('mDate') || A.curDate, name: keep('mName'), phone: keep('mPhone'), notes: keep('mNotes'), barber: keep('mBarber'), mode: keep('mMode') || 'any' };
+  const prev = { date: keep('mDate') || A.curDate, name: keep('mName'), phone: keep('mPhone'), notes: keep('mNotes'), mode: keep('mMode') || 'any' };
   document.getElementById('manualBody').innerHTML = `
     <div class="field"><label>מספר אנשים</label><select id="mCount">${[1, 2, 3, 4].map(n => `<option ${n === M.count ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
     ${M.people.map((p, i) => `<div class="pbox"><div class="pbox-h">${M.count > 1 ? `אדם ${i + 1}` : 'שירות'}</div>
@@ -336,7 +311,6 @@ function renderManual() {
       ${svcs.find(s => s.id === p.serviceId)?.hasHaircut ? `<select data-pi="${i}" data-k="haircutType"><option value="regular" ${p.haircutType !== 'special' ? 'selected' : ''}>תספורת רגילה</option><option value="special" ${p.haircutType === 'special' ? 'selected' : ''}>תספורת מיוחדת / עיצוב מורכב</option></select>` : ''}
     </div>`).join('')}
     ${M.count > 1 ? `<div class="field"><label>סוג שיבוץ</label><select id="mMode"><option value="any">לא משנה — הכי קרוב</option><option value="sequential">ברצף</option><option value="parallel">במקביל</option></select></div>` : ''}
-    ${M.count === 1 ? `<div class="field"><label>ספר</label><select id="mBarber"><option value="">אוטומטי</option>${A.cfg.barbers.filter(b => b.active).map(b => `<option value="${esc(b.id)}">${esc(b.name)}</option>`).join('')}</select></div>` : ''}
     <div class="field"><label>תאריך</label><input type="date" id="mDate" value="${esc(prev.date)}"/></div>
     <label class="ck"><input type="checkbox" id="mOverride"/> שעה חופשית (עקיפת שעות פעילות)</label>
     <div class="field" id="mTimeWrap"><label>שעה</label><select id="mTime"><option value="">טוען…</option></select></div>
@@ -347,7 +321,6 @@ function renderManual() {
     <div class="merr" id="mErr"></div>
     <button class="mcta" id="mSave">שמירת התור</button>`;
   if (document.getElementById('mMode')) document.getElementById('mMode').value = prev.mode;
-  if (document.getElementById('mBarber')) document.getElementById('mBarber').value = prev.barber;
   document.getElementById('mCount').onchange = e => {
     M.count = +e.target.value;
     M.people = Array.from({ length: M.count }, (_, i) => M.people[i] || { serviceId: M.people[0].serviceId, addonIds: [], haircutType: 'regular' });
@@ -357,7 +330,7 @@ function renderManual() {
   document.querySelectorAll('#manualBody [data-add]').forEach(el => el.addEventListener('change', () => {
     const p = M.people[+el.dataset.pi]; p.addonIds = el.checked ? [...p.addonIds, el.dataset.add] : p.addonIds.filter(x => x !== el.dataset.add); loadManualSlots();
   }));
-  ['mDate', 'mMode', 'mBarber'].forEach(id => document.getElementById(id)?.addEventListener('change', loadManualSlots));
+  ['mDate', 'mMode'].forEach(id => document.getElementById(id)?.addEventListener('change', loadManualSlots));
   document.getElementById('mOverride').addEventListener('change', () => {
     const o = document.getElementById('mOverride').checked;
     document.getElementById('mTimeWrap').innerHTML = o ? '<label>שעה</label><input type="time" id="mTime" step="300"/>' : '<label>שעה</label><select id="mTime"></select>';
@@ -372,7 +345,7 @@ async function loadManualSlots() {
   if (!sel || sel.tagName !== 'SELECT') return;
   const date = document.getElementById('mDate').value;
   if (!date) { sel.innerHTML = '<option value="">בחרו תאריך</option>'; return; }
-  const r = await api('POST', '/api/staff/availability', { date, people: manualPeople(), mode: document.getElementById('mMode')?.value || 'any', barberId: document.getElementById('mBarber')?.value || undefined });
+  const r = await api('POST', '/api/staff/availability', { date, people: manualPeople(), mode: document.getElementById('mMode')?.value || 'any' });
   if (!r.ok) { sel.innerHTML = `<option value="">${esc(errMsg(r))}</option>`; return; }
   if (!r.data.open) { sel.innerHTML = '<option value="">המספרה סגורה — סמנו "שעה חופשית" כדי לעקוף</option>'; return; }
   sel.innerHTML = r.data.slots.length ? '<option value="">בחרו שעה…</option>' + r.data.slots.map(s => `<option value="${s.time}">${s.time} – ${s.endTime}${s.mode === 'parallel' ? ' (במקביל)' : s.mode === 'sequential' ? ' (ברצף)' : ''}</option>`).join('') : '<option value="">אין שעות פנויות</option>';
@@ -382,7 +355,7 @@ async function saveManual() {
   const v = id => document.getElementById(id)?.value?.trim() ?? '';
   const body = {
     customer: { fullName: v('mName'), phone: v('mPhone'), notes: v('mNotes'), whatsappConsent: document.getElementById('mConsent').checked },
-    people: manualPeople(), mode: v('mMode') || 'any', date: v('mDate'), time: v('mTime'), barberId: v('mBarber') || undefined, override: document.getElementById('mOverride').checked,
+    people: manualPeople(), mode: v('mMode') || 'any', date: v('mDate'), time: v('mTime'), override: document.getElementById('mOverride').checked,
   };
   if (!body.date || !body.time) { err.textContent = 'נא לבחור תאריך ושעה'; return; }
   if (!body.customer.fullName || !body.customer.phone) { err.textContent = 'נא להזין שם וטלפון'; return; }
@@ -416,7 +389,7 @@ async function showHistory(phone) {
   const c = r.data.customer;
   document.getElementById('editBody').innerHTML = `<div class="ed-top"><b>${esc(phone)}</b> <a class="wa-call" href="${waLink(phone)}" target="_blank" rel="noreferrer">${WA_ICON}</a>
     ${c ? `<div class="ameta">${esc(c.fullName)} · הסכמה לתזכורות וואטסאפ: ${c.whatsappReminders ? 'כן (' + esc((c.whatsappConsentAt || '').slice(0, 10)) + ')' : 'לא'}</div>` : ''}</div>
-    ${r.data.appointments.map(a => `<div class="hrow"><span>${esc(a.date)} ${esc(a.time)}</span><span>${servicesLine(a) || '—'}</span><span class="astatus s-${esc(a.status)}">${STATUS_HE[a.status] || esc(a.status)}</span><small>${esc(bName(a.barberId))}${priceLine(a) ? ' · ' + priceLine(a) : ''}</small></div>`).join('') || '<div class="empty-day"><p>אין היסטוריה</p></div>'}`;
+    ${r.data.appointments.map(a => `<div class="hrow"><span>${esc(a.date)} ${esc(a.time)}</span><span>${servicesLine(a) || '—'}</span><span class="astatus s-${esc(a.status)}">${STATUS_HE[a.status] || esc(a.status)}</span>${priceLine(a) ? `<small>${priceLine(a)}</small>` : ''}</div>`).join('') || '<div class="empty-day"><p>אין היסטוריה</p></div>'}`;
   document.getElementById('editModal').classList.remove('hidden');
 }
 

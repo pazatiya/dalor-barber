@@ -548,16 +548,19 @@ a.opt{color:var(--tx)}
 .cta.danger{background:rgba(248,113,113,.12);color:#fca5a5;box-shadow:none;border:1px solid rgba(248,113,113,.3)}
 </style>
 <link rel="stylesheet" href="/booking-ui.css"/>
+<link rel="stylesheet" href="/dalor-visual.css"/>
 </head>
 <body>
 
 <!-- ══════════════ HOME SCREEN ══════════════ -->
-<div id="home">
-  <div class="home-eyebrow">הבית לגבר</div>
+<div id="home" class="dalor-customer-intro">
+  <div class="customer-scene cinematic-media" aria-hidden="true"><img src="/generated/dalor-customer-editorial-v1.webp" alt="" fetchpriority="high" decoding="async" width="1024" height="1536"/></div>
+  <div class="scene-shade" aria-hidden="true"></div>
+  <div class="customer-content">
+  <p class="home-eyebrow">הבית לגבר</p>
   <div class="h-logo-wrap"><img class="h-logo-img" src="/logo.jpg" alt="DALOR" width="1536" height="1024"/></div>
   <div class="home-rule" aria-hidden="true"></div>
-  <h1>התור הבא שלך<br/>מתחיל כאן</h1>
-  <p class="home-description">בוחרים שירות, מוצאים שעה ומגיעים להסתפר.</p>
+  <h1 class="sr-only">קביעת תור ב־DALOR</h1>
 
   <button class="h-cta" id="enterBtn">
     קביעת תור
@@ -575,6 +578,7 @@ a.opt{color:var(--tx)}
 
   </div>
   <a class="h-address" href="https://waze.com/ul?q=%D7%A4%D7%96+%D7%95%D7%99%D7%90%D7%99%D7%A8&navigate=yes" target="_blank" rel="noreferrer">אלי כהן 12, לוד &nbsp;·&nbsp; ניווט למספרה</a>
+  </div>
 </div>
 
 <!-- ══════════════ BOOKING APP ══════════════ -->
@@ -602,7 +606,7 @@ a.opt{color:var(--tx)}
   <section id="st-people" class="step">
     <div class="welcome-card">
       <img class="wc-logo" src="/logo.jpg" alt="DALOR"/>
-      <div><div class="wc-title">נפגשים ב־DALOR</div><div class="wc-sub">רגע לעצמך. אנחנו נדאג לכל השאר.</div></div>
+      <div><div class="wc-title">קביעת תור</div><div class="wc-sub">בחרו את מספר האנשים שמגיעים.</div></div>
     </div>
     <div class="step-hd"><h2>כמה אנשים מגיעים?</h2></div>
     <div class="opt-grid cols2" id="peopleOpts"></div>

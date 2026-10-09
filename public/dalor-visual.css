@@ -1,0 +1,52 @@
+/* Photographic DALOR intros: separate customer and staff artwork; original logo unchanged. */
+.cinematic-media{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.cinematic-media img{width:100%;height:100%;object-fit:cover;display:block;animation:dalor-scene-reveal 1.5s cubic-bezier(.2,.7,.2,1) both;will-change:auto}
+@keyframes dalor-scene-reveal{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:scale(1)}}
+@keyframes dalor-content-reveal{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dalor-line-reveal{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+#home.dalor-customer-intro{padding:0;background:#111;display:block;isolation:isolate;overflow-y:auto;overflow-x:hidden}
+.customer-scene{position:fixed;inset:0;z-index:-2}
+.customer-scene img{object-position:50% 35%}
+.scene-shade{position:fixed;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(17,17,17,.04) 0%,rgba(17,17,17,.03) 30%,rgba(17,17,17,.74) 56%,#111 77%);pointer-events:none}
+.customer-content{position:relative;min-height:100svh;padding:38svh 24px max(24px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.dalor-customer-intro .home-eyebrow{order:1;color:#F5F0E7;font-size:.8rem;letter-spacing:.06em;margin:0 0 20px;animation:dalor-content-reveal .6s .18s both}
+.dalor-customer-intro .h-logo-wrap{width:230px;height:auto;aspect-ratio:3/2;margin:0;animation:dalor-content-reveal .7s .05s both}
+.dalor-customer-intro .h-logo-img{object-fit:contain;border:0;box-shadow:none;border-radius:0}
+.dalor-customer-intro .home-rule{order:2;margin:0 0 22px;width:44px;background:#B99A5E;animation:dalor-line-reveal .6s .3s both}
+.dalor-customer-intro .h-cta{order:3;max-width:360px;width:100%;margin:0;animation:dalor-content-reveal .6s .3s both;min-height:58px;position:relative}
+.dalor-customer-intro .h-wa{order:4;max-width:360px;margin:12px 0 0;animation:dalor-content-reveal .6s .38s both;background:rgba(17,17,17,.65)}
+.dalor-customer-intro .h-hours{order:5;margin:24px 0 0;color:#B5B0A7;font-size:.75rem;animation:dalor-content-reveal .6s .42s both;text-align:center;flex-wrap:wrap;justify-content:center}
+.dalor-customer-intro .h-address{order:6;color:#B5B0A7;margin:4px 0 0;animation:dalor-content-reveal .6s .45s both}
+.dalor-customer-intro .h-cta:active{transform:scale(.98)}
+#login.dalor-staff-intro{display:flex;justify-content:center;align-items:center;isolation:isolate;background:#111;padding:28px 24px;overflow-y:auto;overflow-x:hidden}
+.staff-scene{position:fixed;z-index:-2}
+.staff-scene img{object-position:65% center}
+.staff-shade{position:fixed;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(17,17,17,.04),rgba(17,17,17,.22) 25%,rgba(17,17,17,.93) 80%);pointer-events:none}
+.dalor-staff-intro .login-card{position:relative;width:100%;max-width:390px;padding:24px;background:rgba(17,17,17,.94);border:1px solid rgba(185,154,94,.3);box-shadow:0 18px 60px rgba(0,0,0,.22);animation:dalor-content-reveal .7s .15s both;margin-top:16svh}
+.dalor-staff-intro .lc-logo{width:192px;height:128px;margin:0 auto 16px}
+.dalor-staff-intro .lc-name{font-size:1.35rem;letter-spacing:0;font-weight:500;margin:0 0 8px}
+.dalor-staff-intro .lc-sub{font-size:.76rem;margin-bottom:24px;color:#B5B0A7}
+.dalor-staff-intro .login-label{font-weight:400}
+.admin-editorial-banner{position:relative;isolation:isolate;overflow:hidden;min-height:174px;background:#171717;border-bottom:1px solid var(--bd)}
+.admin-editorial-banner::before{content:'';position:absolute;inset:0;z-index:-2;background:url('/generated/dalor-staff-editorial-v1.webp') center 56%/cover no-repeat;opacity:.4}
+.admin-editorial-banner::after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(270deg,#111 0%,rgba(17,17,17,.88) 42%,rgba(17,17,17,.2) 100%)}
+.admin-editorial-banner #adminViewDescription{font-size:.82rem;color:#D0CBC1}
+@media(min-width:900px){
+ .customer-scene{left:42%;right:0}
+ .customer-scene img{object-position:center 35%}
+ .scene-shade{background:linear-gradient(90deg,#111 0%,#111 32%,rgba(17,17,17,.82) 43%,rgba(17,17,17,.06) 65%,rgba(17,17,17,.05) 100%)}
+ .customer-content{width:46%;padding:40px;justify-content:center;min-height:100dvh;margin-right:auto;margin-left:0}
+ .dalor-customer-intro .h-logo-wrap{width:min(370px,90%)}
+ .dalor-customer-intro .home-eyebrow{margin-bottom:26px;font-size:.95rem}
+ .dalor-customer-intro .home-rule{margin-bottom:32px}
+ #login.dalor-staff-intro{justify-content:flex-end;padding:60px max(64px,calc((100vw - 1440px)/2 + 80px))}
+ .staff-scene img{object-position:center}
+ .staff-shade{background:linear-gradient(90deg,rgba(17,17,17,.97),rgba(17,17,17,.9) 25%,rgba(17,17,17,.14) 66%)}
+ .dalor-staff-intro .login-card{margin:0;max-width:400px;padding:32px;background:rgba(17,17,17,.88)}
+ .dalor-staff-intro .lc-logo{width:240px;height:160px;margin-bottom:24px}
+ .admin-editorial-banner{min-height:186px}
+ .admin-editorial-banner::before{background-position:center 55%;opacity:.55}
+}
+@media(max-width:599px){.admin-editorial-banner{min-height:154px}.admin-editorial-banner::before{background-position:72% center;opacity:.3}.admin-editorial-banner::after{background:linear-gradient(270deg,rgba(17,17,17,.94),rgba(17,17,17,.72))}}
+@media(max-height:700px) and (max-width:899px){.customer-content{padding-top:30svh;min-height:100svh}.dalor-customer-intro .h-logo-wrap{width:170px}.dalor-customer-intro .home-eyebrow{margin-bottom:12px}.dalor-customer-intro .home-rule{margin-bottom:16px}.dalor-customer-intro .h-hours{margin-top:16px}.dalor-staff-intro .login-card{margin-top:8svh}.dalor-staff-intro .lc-logo{width:156px;height:104px}}
+@media(prefers-reduced-motion:reduce){.cinematic-media img,.customer-content>*,.dalor-staff-intro .login-card{animation:none!important;transform:none!important;opacity:1!important}}
