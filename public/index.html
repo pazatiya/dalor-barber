@@ -567,7 +567,7 @@ a.opt{color:var(--tx)}
     <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
   </button>
 
-  <button class="h-wa hidden" id="meBtn" style="cursor:pointer;color:var(--gold2);border-color:var(--bdg);background:rgba(201,168,76,.08)">האזור האישי שלי</button>
+  <button class="h-wa" id="meBtn" style="cursor:pointer;color:var(--gold2);border-color:var(--bdg);background:rgba(201,168,76,.08)">האזור האישי שלי</button>
 
   <a class="h-wa" href="https://wa.me/972507983306" target="_blank" rel="noreferrer">
     <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
@@ -743,8 +743,9 @@ a.opt{color:var(--tx)}
 
   <!-- אזור אישי -->
   <section id="st-me" class="step">
-    <div class="step-hd"><h2 id="meTitle">האזור האישי</h2></div>
-    <div id="meBody"></div>
+    <button class="back-btn" id="meHome" type="button">חזרה למסך הראשי</button>
+    <div class="step-hd"><h2 id="meTitle">האזור האישי</h2><p id="meSubtitle">התורים והפרטים שלך ב־DALOR</p></div>
+    <div id="meBody" aria-live="polite"></div>
     <div class="nextbar"><button class="cta" id="meNew">קביעת תור חדש</button></div>
     <div style="text-align:center;margin-top:14px"><button class="reset-lnk" id="meForget">התנתקות ממכשיר זה</button></div>
   </section>
@@ -1242,28 +1243,57 @@ const getCT = () => { try { return localStorage.getItem(CT_KEY) || ''; } catch {
 const setCT = v => { try { v ? localStorage.setItem(CT_KEY, v) : localStorage.removeItem(CT_KEY); } catch {} };
 async function loadMe() {
   const t = getCT(); if (!t) return null;
-  const r = await jf('/api/v2/me', { headers: { 'Content-Type': 'application/json', 'x-customer-token': t } }).catch(() => ({ ok: false }));
+  const r = await jf('/api/v2/me', { headers: { 'Content-Type': 'application/json', 'x-customer-token': t } });
   if (r.status === 401) { setCT(''); return null; }
-  return r.ok ? r.body : null;
+  if (!r.ok) throw new Error('me_unavailable');
+  return r.body;
+}
+function rememberProfile(me) {
+  if (!me) return;
+  if (!S.d.fullName) S.d.fullName = me.fullName;
+  if (!S.d.phone) S.d.phone = me.phone;
+  if (S.d.firstVisit === null) S.d.firstVisit = false;
 }
 async function initMe() {
-  S.me = await loadMe();
-  $('meBtn').classList.toggle('hidden', !S.me);
-  if (S.me) { if (!S.d.fullName) S.d.fullName = S.me.fullName; if (!S.d.phone) S.d.phone = S.me.phone; if (S.d.firstVisit === null) S.d.firstVisit = false; }
+  try { S.me = await loadMe(); rememberProfile(S.me); } catch {}
 }
+let meLoading = false;
 async function openMe() {
+  if (meLoading) return;
+  meLoading = true;
   $('home').classList.add('out'); $('home').inert = true; $('app').inert = false; $('app').classList.add('visible');
-  try { await (S.cat ? Promise.resolve() : load()); } catch {}
-  S.me = await loadMe();
-  if (!S.me) { $('meBtn').classList.add('hidden'); return start(); }
   show('me');
-  $('meTitle').textContent = `שלום ${S.me.fullName}`;
-  const wa = S.cat ? S.cat.settings.waPhone : '972507983306';
-  $('meBody').innerHTML = S.me.upcoming.length
-    ? `<div class="sub-q">התורים הקרובים שלך</div>` + S.me.upcoming.map(u => `<a class="opt" style="text-decoration:none;margin-bottom:10px" href="/?b=${encodeURIComponent(u.bookingId)}&t=${encodeURIComponent(u.manageToken)}"><span class="ot"><span class="on">${fmtHe(u.date)} · <bdi dir="ltr">${u.time}</bdi></span><span class="od">${esc(u.services.join(', '))}${u.people > 1 ? ` · ${u.people} אנשים` : ''}</span></span><span class="op">צפייה וביטול ›</span></a>`).join('')
-    : '<div class="no-slots">אין לך תורים קרובים</div>';
-  $('meBody').insertAdjacentHTML('beforeend', `<div class="hint" style="margin-top:10px">ביקורים שהושלמו: ${S.me.visits}. לשינוי תור פנו אלינו בוואטסאפ.</div>`);
+  $('meTitle').textContent = 'האזור האישי';
+  $('meForget').hidden = true;
+  $('meBody').setAttribute('aria-busy', 'true');
+  $('meBody').innerHTML = '<div class="slot-skeleton" aria-hidden="true"></div><p class="hint" role="status">טוענים את התורים שלך…</p>';
+  try {
+    S.me = await loadMe();
+    rememberProfile(S.me);
+    if (!S.me) {
+      $('meBody').innerHTML = '<div class="personal-empty"><span class="personal-mark" aria-hidden="true">D</span><h3>התורים שלך, במקום אחד</h3><p>אחרי קביעת תור במכשיר הזה, התורים והפרטים שלך יופיעו כאן באופן אוטומטי.</p><p class="hint">כבר קבעת ממכשיר אחר? אפשר לנהל את התור באמצעות הקישור שקיבלת באישור ההזמנה.</p></div>';
+      return;
+    }
+    const me = S.me;
+    $('meForget').hidden = false;
+    $('meBody').innerHTML = `<div class="personal-profile"><span class="personal-avatar" aria-hidden="true">${esc(Array.from(me.fullName || 'D')[0])}</span><div><h3>${esc(me.fullName)}</h3><bdi dir="ltr">${esc(me.phone)}</bdi></div></div><div class="personal-stats"><div><strong>${me.upcoming.length}</strong><span>תורים קרובים</span></div><div><strong>${me.visits}</strong><span>ביקורים שהושלמו</span></div></div><h3 class="personal-heading">התורים הקרובים שלך</h3>`;
+    $('meBody').insertAdjacentHTML('beforeend', me.upcoming.length
+      ? me.upcoming.map(u => `<a class="personal-appointment" href="/?b=${encodeURIComponent(u.bookingId)}&t=${encodeURIComponent(u.manageToken)}"><div class="personal-date">${fmtHe(u.date)}<strong><bdi dir="ltr">${esc(u.time)}</bdi></strong></div><div class="personal-services">${esc(u.services.join(', '))}${u.people > 1 ? ` · ${u.people} אנשים` : ''}</div><span class="personal-manage">פרטי התור וניהול ההזמנה ←</span></a>`).join('')
+      : '<div class="personal-empty"><p>אין לך תורים קרובים כרגע.</p><p class="hint">אפשר לקבוע את התור הבא עם הפרטים שכבר נשמרו.</p></div>');
+    $('meBody').insertAdjacentHTML('beforeend', '<p class="hint">לשינוי מועד התור אפשר לפנות למספרה דרך כפתור הוואטסאפ.</p>');
+  } catch {
+    $('meBody').innerHTML = '<div class="notice" role="alert">לא הצלחנו לטעון את התורים שלך. נסו שוב בעוד רגע.</div><button class="cta" id="meRetry" type="button">טעינה מחדש</button>';
+    $('meRetry').addEventListener('click', openMe);
+  } finally {
+    meLoading = false;
+    $('meBody').setAttribute('aria-busy', 'false');
+  }
 }
+$('meHome').addEventListener('click', () => {
+  $('app').classList.remove('visible'); $('app').inert = true;
+  $('home').classList.remove('out'); $('home').inert = false;
+  $('meBtn').focus(); window.scrollTo(0, 0);
+});
 $('meBtn').addEventListener('click', openMe);
 $('meNew').addEventListener('click', start);
 $('meForget').addEventListener('click', () => { if (confirm('להתנתק מהמכשיר הזה? הפרטים שנשמרו יימחקו מהמכשיר.')) { setCT(''); S.me = null; S.d = { fullName:'', phone:'', firstVisit:null, notes:'', consent:null }; location.href = '/'; } });
