@@ -4,8 +4,18 @@
     {
       "name": "dalor-barber",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["server.js"],
+      "runtimeArgs": [
+        "server.js"
+      ],
       "port": 3020
+    },
+    {
+      "name": "dalor-barber-memory",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/dev-memory.js"
+      ],
+      "port": 3021
     }
   ]
 }

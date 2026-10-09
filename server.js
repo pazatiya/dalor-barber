@@ -7,15 +7,30 @@ const webpush    = require('web-push');
 const admin      = require('firebase-admin');
 
 // ── Firebase / Firestore ─────────────────────────────────────────
-const firebaseCredential = process.env.FIREBASE_SERVICE_ACCOUNT
-  ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-  : require('./firebase-key.json');
-admin.initializeApp({
-  credential: admin.credential.cert(firebaseCredential),
-});
-const db = admin.firestore();
+// USE_MEMORY_DB=1 — מסד נתונים בזיכרון לפיתוח ובדיקות מקומיות בלבד (לא נתמך ב-production).
+let db;
+if (process.env.USE_MEMORY_DB === '1') {
+  if (process.env.NODE_ENV === 'production') throw new Error('USE_MEMORY_DB is not allowed in production');
+  db = new (require('./lib/memory-firestore').MemoryFirestore)();
+  console.warn('⚠️  USE_MEMORY_DB=1 — הנתונים נשמרים בזיכרון בלבד ויימחקו בכיבוי');
+} else {
+  const firebaseCredential = process.env.FIREBASE_SERVICE_ACCOUNT
+    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+    : require('./firebase-key.json');
+  admin.initializeApp({
+    credential: admin.credential.cert(firebaseCredential),
+  });
+  db = admin.firestore();
+}
+
+const E        = require('./lib/engine');
+const { createBookingService, BookingError, normalizePhone } = require('./lib/booking');
+const { makeAuthenticator } = require('./lib/auth');
+const { makeSender, processOutbox } = require('./lib/notify');
 
 const app      = express();
+// מאחורי Render/Cloudflare: בלי זה req.ip הוא כתובת ה-proxy ומגבלות הקצב משותפות לכל הלקוחות
+app.set('trust proxy', process.env.TRUST_PROXY === undefined ? 1 : (Number.isNaN(+process.env.TRUST_PROXY) ? process.env.TRUST_PROXY : +process.env.TRUST_PROXY));
 const PORT     = process.env.PORT || 3020;
 const ADMIN_KEY  = process.env.ADMIN_KEY || '2810';
 
@@ -51,6 +66,7 @@ app.use((req, res, next) => {
 function makeRateLimit(windowMs, max, msg) {
   const hits = new Map();
   return (req, res, next) => {
+    if (process.env.NODE_ENV === 'test') return next();
     const ip = req.ip || req.connection.remoteAddress;
     const now = Date.now();
     const recent = (hits.get(ip) || []).filter(t => now - t < windowMs);
@@ -63,7 +79,7 @@ function makeRateLimit(windowMs, max, msg) {
 
 const adminRateLimit = makeRateLimit(15 * 60 * 1000, 300, 'יותר מדי בקשות, נסה שוב בעוד 15 דקות');
 const bookRateLimit  = makeRateLimit(10 * 60 * 1000, 5,  'יותר מדי הזמנות, נסה שוב בעוד מעט');
-const availRateLimit = makeRateLimit(60 * 1000, 60, 'יותר מדי בקשות');
+const availRateLimit = makeRateLimit(60 * 1000, 240, 'יותר מדי בקשות'); // הלוח בודק זמינות לכמה ימים במקביל
 
 app.use(express.json({ limit: '20kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -115,6 +131,10 @@ function requireAdmin(req, res, next) {
   }
   next();
 }
+
+const bookingSvc = createBookingService({ db, baseUrl: process.env.PUBLIC_BASE_URL || 'https://dalorbook.duckdns.org' });
+const authenticate = makeAuthenticator({ adminKey: ADMIN_KEY, loadBarbers: async () => (await bookingSvc.loadConfig()).barbers });
+const sender = makeSender();
 
 app.use('/api/admin', adminRateLimit, requireAdmin);
 
@@ -253,7 +273,7 @@ async function processDueReminders() {
 
   await Promise.all(snap.docs.map(async (docSnap) => {
     const appt = docSnap.data();
-    const diff = new Date(`${appt.date}T${appt.time}:00`).getTime() - now;
+    const diff = E.ilToEpoch(appt.date, E.toMin(appt.time)) - now; // שעון ישראל, לא שעון השרת
     const updates = {};
 
     if (!appt.reminderSent24h && diff >= WINDOW_24H.min && diff <= WINDOW_24H.max) {
@@ -300,9 +320,12 @@ async function sendDailySummary() {
 }
 
 // 0-5 = ראשון עד שישי (6 = שבת, מדולג)
-cron.schedule('0 8 * * 0-5', () => {
-  sendDailySummary().catch(err => console.error('Cron daily error:', err.message));
-}, { timezone: TZ });
+// ב-Cloud Run השרת יכול לישון ב-8:00, אז שם מפעילים דרך Cloud Scheduler שקורא ל-/api/admin/test-daily-summary
+if (process.env.DISABLE_INTERNAL_CRON !== 'true') {
+  cron.schedule('0 8 * * 0-5', () => {
+    sendDailySummary().catch(err => console.error('Cron daily error:', err.message));
+  }, { timezone: TZ });
+}
 
 // ── Public ──────────────────────────────────────────────────────
 
@@ -328,36 +351,33 @@ app.get('/api/day-status', async (req, res) => {
   res.json(await getConfig('day-status', {}));
 });
 
+// תאימות לאחור ללקוחות ישנים (PWA במטמון): מסלול ישן שעובר דרך מנוע ההזמנות האטומי.
+// הלקוח החדש משתמש ב-/api/v2/bookings.
 app.post('/api/appointments', bookRateLimit, async (req, res) => {
-  const fullName = clean(req.body.fullName, 80);
-  const phone    = clean(req.body.phone, 24);
-  const notes    = clean(req.body.notes, 400);
-  const date     = clean(req.body.date, 20);
-  const time     = clean(req.body.time, 10);
-
-  if (!fullName || !phone || !date || !time) return res.status(400).json({ error: 'Missing fields' });
-
-  const existing = await getAppointmentsByDate(date);
-  if (existing.some(a => a.time === time && a.status !== 'cancelled'))
-    return res.status(409).json({ error: 'Time already booked' });
-
-  const appt = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    fullName, phone, notes, date, time,
-    status: 'confirmed',
-    createdAt: new Date().toISOString(),
-    source: 'client',
-  };
-  await addAppointment(appt);
-  res.status(201).json({ ok: true, id: appt.id, date: appt.date, time: appt.time });
-
-  sendPush({
-    title: `💈 תור חדש — ${appt.fullName}`,
-    body: `${appt.date} · ${appt.time}`,
-    tag: `new-${appt.id}`,
-    url: '/admin.html',
-  });
+  try {
+    const r = await bookingSvc.createBooking({
+      customer: { fullName: req.body.fullName, phone: req.body.phone, notes: req.body.notes, policyAccepted: true },
+      people: [{ serviceId: 'haircut' }], mode: 'any', date: clean(req.body.date, 20), time: clean(req.body.time, 10),
+    }, { source: 'client-legacy' });
+    res.status(201).json({ ok: true, id: r.appointments[0].id, date: r.date, time: r.time });
+    notifyNewBooking(r);
+  } catch (e) {
+    if (e instanceof BookingError && e.code === 'slot_unavailable') return res.status(409).json({ error: 'Time already booked' });
+    if (e instanceof BookingError) return res.status(e.status === 409 ? 409 : 400).json({ error: e.message });
+    console.error('[legacy booking]', e); res.status(500).json({ error: 'Server error' });
+  }
 });
+
+function notifyNewBooking(r) {
+  const a = r.appointments[0];
+  sendPush({
+    title: `💈 תור חדש — ${a.fullName.replace(/ \(אדם \d+\)$/, '')}`,
+    body: `${r.date} · ${r.time}${r.people > 1 ? ` · ${r.people} אנשים` : ''}`,
+    tag: `new-${r.bookingId}`, url: '/admin.html',
+  }).catch(() => {});
+}
+
+require('./lib/routes')(app, { db, svc: bookingSvc, authenticate, sender, rl: { book: bookRateLimit, avail: availRateLimit, admin: adminRateLimit }, notifyNewBooking, ADMIN_KEY });
 
 // ── Admin ────────────────────────────────────────────────────────
 
@@ -403,41 +423,24 @@ app.get('/api/admin/appointments', requireAdmin, async (req, res) => {
 });
 
 app.post('/api/admin/appointments', requireAdmin, async (req, res) => {
-  const fullName = clean(req.body.fullName, 80);
-  const phone    = clean(req.body.phone, 24);
-  const notes    = clean(req.body.notes, 400);
-  const date     = clean(req.body.date, 20);
-  const time     = clean(req.body.time, 10);
-
-  if (!fullName || !phone || !date || !time) return res.status(400).json({ error: 'Missing fields' });
-
-  const existing = await getAppointmentsByDate(date);
-  if (existing.some(a => a.time === time && a.status !== 'cancelled'))
-    return res.status(409).json({ error: 'Time already booked' });
-
-  const appt = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    fullName, phone, notes, date, time,
-    status: 'confirmed',
-    createdAt: new Date().toISOString(),
-    source: 'admin',
-  };
-  await addAppointment(appt);
-  res.status(201).json(appt);
+  try {
+    const r = await bookingSvc.createBooking({
+      customer: { fullName: req.body.fullName, phone: req.body.phone, notes: req.body.notes },
+      people: [{ serviceId: 'haircut' }], mode: 'any', date: clean(req.body.date, 20), time: clean(req.body.time, 10),
+    }, { admin: true, ignoreLead: true, forceBarberId: E.mergeConfig(null).barbers[0].id });
+    res.status(201).json(r.appointments[0]);
+  } catch (e) {
+    if (e instanceof BookingError) return res.status(e.status).json({ error: e.code === 'slot_unavailable' ? 'Time already booked' : e.message });
+    console.error('[admin legacy booking]', e); res.status(500).json({ error: 'Server error' });
+  }
 });
 
 app.patch('/api/admin/appointments/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-  if (!['confirmed', 'completed', 'cancelled'].includes(status)) return res.status(400).json({ error: 'Bad status' });
-
-  const docRef = db.collection('appointments').doc(id);
-  const doc    = await docRef.get();
-  if (!doc.exists) return res.status(404).json({ error: 'Not found' });
-
-  const updatedAt = new Date().toISOString();
-  await docRef.update({ status, updatedAt });
-  res.json({ ...doc.data(), status, updatedAt });
+  try { res.json(await bookingSvc.setStatus(req.params.id, req.body.status, { role: 'admin' })); }
+  catch (e) {
+    if (e instanceof BookingError) return res.status(e.status).json({ error: e.code === 'not_found' ? 'Not found' : e.message });
+    console.error('[admin patch]', e); res.status(500).json({ error: 'Server error' });
+  }
 });
 
 app.delete('/api/admin/appointments/:id', requireAdmin, async (req, res) => {
@@ -486,7 +489,7 @@ app.delete('/api/admin/day-status/:date', async (req, res) => {
   res.json({ ok: true });
 });
 
-app.listen(PORT, () => {
+function start() { return app.listen(PORT, () => {
   console.log(`\n✦ DALOR Barber Studio — http://localhost:${PORT}`);
   console.log(`✦ Admin:     http://localhost:${PORT}/admin.html`);
   console.log(`✦ Key:       ${ADMIN_KEY}`);
@@ -504,3 +507,12 @@ app.listen(PORT, () => {
       .catch(e => console.log('✦ DuckDNS:   ⚠️ שגיאה:', e.message));
   }
 });
+}
+
+// Outbox: שליחת הודעות לקוחות שהגיע זמנן (רק אם ספק וואטסאפ מוגדר)
+if (process.env.DISABLE_INTERNAL_CRON !== 'true' && sender.configured) {
+  cron.schedule('* * * * *', () => { processOutbox({ db, sender }).catch(err => console.error('Outbox error:', err.message)); });
+}
+
+if (require.main === module) start();
+module.exports = { app, db, start, bookingSvc, sendPush };

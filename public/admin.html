@@ -294,7 +294,7 @@ img{display:block}
   padding:0;
   animation:mfin .2s ease;
 }
-#modal.hidden{display:none}
+#modal.hidden,#editModal.hidden{display:none}
 @keyframes mfin{from{opacity:0}to{opacity:1}}
 .msheet{
   width:100%;max-width:520px;margin:0 auto;
@@ -451,6 +451,69 @@ img{display:block}
   text-decoration:none;transition:background .15s;
 }
 .rwa-btn:hover{background:rgba(37,211,102,.22)}
+
+/* ══ ניהול v2 ══ */
+#editModal{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:flex;align-items:flex-end}
+#tabs{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--bd);overflow-x:auto;scrollbar-width:none;position:sticky;top:59px;z-index:19;background:rgba(9,9,12,.94)}
+#tabs button{flex:1;white-space:nowrap;padding:8px 12px;border-radius:var(--rs);font-size:.85rem;font-weight:800;color:var(--mt);border:1px solid transparent}
+#tabs button.on{color:var(--gold2);background:rgba(201,168,76,.1);border-color:var(--bdg)}
+.view{padding:14px 16px 100px}
+.dtools{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 18px 0}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:6px 12px;border-radius:20px;background:var(--s2);border:1px solid var(--bd);font-size:.78rem;font-weight:700;color:var(--mt);display:inline-flex;align-items:center;gap:6px}
+.chip i,.bbadge i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.chip.on{color:var(--tx);border-color:var(--gold);background:rgba(201,168,76,.12)}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:var(--rs);overflow:hidden;margin-bottom:12px}
+.dtools .seg{margin:0}
+.seg button{padding:6px 12px;font-size:.78rem;font-weight:700;color:var(--mt);background:var(--s2)}
+.seg button.on{background:rgba(201,168,76,.18);color:var(--gold2)}
+.time-badge small{display:block;font-size:.65rem;color:var(--mt);font-weight:600;margin-top:3px}
+.ameta{font-size:.8rem;color:var(--mt);margin-top:3px;line-height:1.4}
+.bbadge{display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:700;color:var(--mt);margin-inline-start:8px}
+.grp{font-size:.65rem;font-weight:800;padding:2px 7px;border-radius:10px;background:rgba(96,165,250,.12);color:var(--blue);margin-inline-start:6px}
+.astatus.s-pending{background:rgba(251,146,60,.1);color:var(--orange);border:1px solid rgba(251,146,60,.25)}
+.astatus.s-confirmed{background:rgba(201,168,76,.12);color:var(--gold2);border:1px solid rgba(201,168,76,.2)}
+.astatus.s-arrived,.astatus.s-in_progress{background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.25)}
+.astatus.s-completed{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.astatus.s-cancelled,.astatus.s-no_show{background:rgba(248,113,113,.08);color:var(--red);border:1px solid rgba(248,113,113,.15)}
+.acard.pending{border-color:rgba(251,146,60,.3)}.acard.arrived,.acard.in_progress{border-color:rgba(96,165,250,.3)}.acard.no_show{opacity:.5}
+.acard-actions{flex-wrap:wrap}.aact{white-space:nowrap}.aact.edit{color:var(--gold2)}
+button.aact{border:1px solid var(--bd);border-radius:var(--rs);margin:3px;flex:none;padding:8px 12px}
+.acard-actions .aact{border:none;border-radius:0;margin:0;flex:1}
+/* timeline */
+.tl{display:flex;border:1px solid var(--bd);border-radius:var(--r);overflow-x:auto;background:var(--s)}
+.tl-hours{flex:0 0 46px;border-left:1px solid var(--bd);position:sticky;right:0;background:var(--s);z-index:2}
+.tl-cols{display:flex;flex:1;min-width:0}
+.tl-col{flex:1;min-width:92px;border-left:1px solid var(--bd)}
+.tl-hd{height:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.8rem;font-weight:800;border-bottom:1px solid var(--bd);cursor:default}
+.tl-hd small{font-size:.65rem;color:var(--mt);font-weight:600}.tl-hd[data-date]{cursor:pointer}
+.tl-h{font-size:.65rem;color:var(--mt);text-align:center;padding-top:2px;border-bottom:1px dashed rgba(255,255,255,.05);box-sizing:border-box}
+.tl-body{position:relative;background:repeating-linear-gradient(to bottom,transparent 0,transparent 51px,rgba(255,255,255,.05) 51px,rgba(255,255,255,.05) 52px)}
+.tl-a{position:absolute;box-sizing:border-box;padding:2px 5px;border-radius:6px;font-size:.68rem;line-height:1.25;overflow:hidden;cursor:pointer;background:color-mix(in srgb,var(--c) 22%,var(--s2));border:1px solid var(--c);border-inline-end-width:3px;color:var(--tx)}
+.tl-a span{color:var(--mt)}.tl-a.s-completed{opacity:.55}.tl-a.s-pending{border-style:dashed}
+.wk-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.wk-t{text-align:center;font-weight:800;font-size:.9rem}
+.link{color:var(--gold);font-size:.75rem;text-decoration:underline;font-weight:700}
+/* forms */
+.checks{display:flex;flex-wrap:wrap;gap:6px 14px}.checks label,.ck{font-size:.85rem;display:flex;align-items:center;gap:7px;color:var(--tx);margin:6px 0}
+.checks input,.ck input{width:18px;height:18px;accent-color:var(--gold)}
+.pbox{border:1px solid var(--bd);border-radius:var(--rs);padding:10px;margin-bottom:12px;display:grid;gap:8px}
+.pbox-h{font-size:.78rem;font-weight:800;color:var(--gold)}
+.pbox select,.field select{background:var(--s2);border:1px solid var(--bd);color:var(--tx);border-radius:var(--rs);padding:10px;width:100%}
+.ed-top{margin-bottom:14px}.ed-actions{display:flex;flex-wrap:wrap;gap:4px;margin-top:12px}
+.hrow{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;padding:9px 0;border-bottom:1px solid var(--bd);font-size:.85rem;align-items:center}.hrow small{grid-column:1/-1;color:var(--mt)}
+button.crow{display:grid;width:100%;text-align:right;grid-template-columns:1fr auto;gap:2px 10px;background:var(--s);border:1px solid var(--bd);border-radius:var(--rs);padding:12px 14px;margin-bottom:8px}
+button.crow small{grid-column:1/-1;color:var(--mt)}
+.note-box{background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.25);border-radius:var(--rs);padding:11px 14px;font-size:.82rem;margin-bottom:12px;line-height:1.5}
+.orow{display:flex;gap:10px;justify-content:space-between;align-items:center;background:var(--s);border:1px solid var(--bd);border-radius:var(--rs);padding:12px;margin-bottom:8px}
+.oa{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.scard{background:var(--s);border:1px solid var(--bd);border-radius:var(--r);padding:14px;margin-bottom:12px}.scard.off{opacity:.55}
+.scard-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.warn{font-size:.7rem;font-weight:800;color:var(--orange);background:rgba(251,146,60,.1);border-radius:10px;padding:2px 8px}.ok{font-size:.7rem;color:var(--green);font-weight:700}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.hrs{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}.hrs .field{flex:1;min-width:84px;margin-bottom:8px}.hrs>b{width:26px;padding-bottom:20px}
+h4{font-size:.8rem;color:var(--gold);margin:14px 0 6px}
+.field input[type=time],.field input[type=date]{direction:ltr;text-align:right}
+@media(min-width:520px){#tabs{max-width:520px}}
 </style>
 </head>
 <body>
@@ -488,6 +551,15 @@ img{display:block}
     </div>
   </header>
 
+  <nav id="tabs">
+    <button data-view="day" class="on">יומן</button>
+    <button data-view="week">שבוע</button>
+    <button data-view="customers" data-admin>לקוחות</button>
+    <button data-view="outbox" data-admin>הודעות</button>
+    <button data-view="settings" data-admin>הגדרות</button>
+  </nav>
+
+  <div id="view-day">
   <!-- Day Navigator -->
   <div id="daynav">
     <button id="prevday" class="dnav-btn" aria-label="יום קודם">›</button>
@@ -503,9 +575,15 @@ img{display:block}
 
   <!-- Stats -->
   <div id="statsbar"></div>
+  <div id="dayTools" class="dtools"></div>
 
   <!-- Appointment List -->
   <div id="apptlist"></div>
+  </div>
+  <div id="view-week" class="view hidden"></div>
+  <div id="view-customers" class="view hidden"></div>
+  <div id="view-outbox" class="view hidden"></div>
+  <div id="view-settings" class="view hidden"></div>
 
   <!-- FAB -->
   <button id="fab" aria-label="תור חדש">+</button>
@@ -514,36 +592,16 @@ img{display:block}
 <!-- ═══════════ ADD MODAL ═══════════ -->
 <div id="modal" class="hidden">
   <div class="msheet">
-    <div class="mhdr">
-      <h3>תור ידני</h3>
-      <button class="mclose" id="closemodal">✕</button>
-    </div>
-    <form id="addform" novalidate>
-      <div class="field">
-        <label for="adate">תאריך</label>
-        <input id="adate" type="date" required/>
-      </div>
-      <div class="field">
-        <label for="atime">שעה</label>
-        <select id="atime" required>
-          <option value="">— בחרו תחילה תאריך —</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="aname">שם מלא *</label>
-        <input id="aname" required placeholder="ישראל ישראלי" autocomplete="off"/>
-      </div>
-      <div class="field">
-        <label for="aphone">טלפון *</label>
-        <input id="aphone" required inputmode="tel" placeholder="050-0000000"/>
-      </div>
-      <div class="field">
-        <label for="anotes">הערות</label>
-        <textarea id="anotes" placeholder="סוג תספורת, הערה מיוחדת…"></textarea>
-      </div>
-      <button type="submit" id="addbtn" class="mcta">שמירת התור</button>
-      <div id="adderr" class="merr"></div>
-    </form>
+    <div class="mhdr"><h3>תור חדש</h3><button class="mclose" id="closemodal">✕</button></div>
+    <div id="manualBody"></div>
+  </div>
+</div>
+
+<!-- ═══════════ EDIT / HISTORY MODAL ═══════════ -->
+<div id="editModal" class="hidden">
+  <div class="msheet">
+    <div class="mhdr"><h3>פרטי תור</h3><button class="mclose" id="closeedit">✕</button></div>
+    <div id="editBody"></div>
   </div>
 </div>
 
@@ -715,38 +773,6 @@ function adminFetch(url, opts={}){
 // ════════════════════════════════════════════
 // LOGIN
 // ════════════════════════════════════════════
-async function tryLogin(){
-  const k = document.getElementById('keyinput').value.trim();
-  if(!k){ document.getElementById('loginerr').textContent = 'נא להזין מפתח כניסה'; return; }
-  try{
-    const r = await fetch('/api/admin/auth', { headers: { 'x-admin-key': k } });
-    if(!r.ok) throw new Error();
-    A.key = k;
-    localStorage.setItem(ADMIN_KEY_LS, k);
-    showAdmin();
-  }catch{
-    document.getElementById('loginerr').textContent = 'מפתח שגוי — נסו שנית';
-    document.getElementById('keyinput').value = '';
-    document.getElementById('keyinput').focus();
-  }
-}
-
-function showAdmin(){
-  document.getElementById('login').classList.add('hidden');
-  document.getElementById('adminApp').classList.remove('hidden');
-  startClock();
-  loadDay();
-  loadAllStats();
-  checkReminders();
-  initPush();
-  setInterval(()=>{ loadDay(); checkReminders(); }, 30000);
-}
-
-function logout(){
-  localStorage.removeItem(ADMIN_KEY_LS);
-  location.reload();
-}
-
 // ════════════════════════════════════════════
 // CLOCK
 // ════════════════════════════════════════════
@@ -774,236 +800,6 @@ function goToday(){ A.curDate = toISO(new Date()); loadDay(); }
 // ════════════════════════════════════════════
 // LOAD DATA
 // ════════════════════════════════════════════
-async function loadDay(){
-  document.getElementById('navdate').textContent = fmtShort(A.curDate);
-
-  try{
-    const [ar, br, sr] = await Promise.all([
-      adminFetch(`/api/admin/appointments?date=${A.curDate}`),
-      fetch('/api/blocked'),
-      fetch('/api/day-status'),
-    ]);
-    A.appts      = ar.ok ? await ar.json() : [];
-    A.blocked    = br.ok ? await br.json() : [];
-    A.dayStatus  = sr.ok ? await sr.json() : {};
-  }catch{ A.appts=[]; A.blocked=[]; A.dayStatus={}; }
-
-  const st = A.dayStatus[A.curDate];
-  const btn = document.getElementById('statusbtn');
-  if(btn){ btn.classList.toggle('has-status', !!st); }
-
-  renderAppts();
-}
-
-async function loadAllStats(){
-  try{
-    const today = toISO(new Date());
-    const weekEnd = toISO(new Date(Date.now() + 7*86400000));
-    const [tr, wr] = await Promise.all([
-      adminFetch(`/api/admin/appointments?date=${today}`),
-      adminFetch(`/api/admin/appointments?from=${today}&to=${weekEnd}`),
-    ]);
-    const todayAppts  = tr.ok ? (await tr.json()).filter(a=>a.status!=='cancelled') : [];
-    const weekAppts   = wr.ok ? (await wr.json()).filter(a=>a.status!=='cancelled') : [];
-    renderStats(todayAppts.length, weekAppts.length);
-  }catch{ renderStats(0,0); }
-}
-
-function renderStats(todayCnt, weekCnt){
-  document.getElementById('statsbar').innerHTML = `
-    <div class="stat today-stat">
-      <span class="stat-n">${todayCnt}</span>
-      <span class="stat-l">תורים היום</span>
-    </div>
-    <div class="stat clickable" onclick="openWeekModal()">
-      <span class="stat-n">${weekCnt}</span>
-      <span class="stat-l">תורים שבוע ›</span>
-    </div>
-    <div class="stat" id="nextStatCard">
-      <span class="stat-n" style="font-size:.9rem;color:var(--mt)">—</span>
-      <span class="stat-l">התור הבא</span>
-    </div>
-  `;
-}
-
-// ════════════════════════════════════════════
-// WEEK MODAL
-// ════════════════════════════════════════════
-async function openWeekModal(){
-  document.getElementById('weekModal').classList.remove('hidden');
-  const list = document.getElementById('wmList');
-  list.innerHTML = '<div class="wm-empty">טוען…</div>';
-
-  const today = toISO(new Date());
-  const weekEnd = toISO(new Date(Date.now() + 7*86400000));
-  try{
-    const r = await adminFetch(`/api/admin/appointments?from=${today}&to=${weekEnd}`);
-    const appts = r.ok ? await r.json() : [];
-    const active = appts.filter(a=>a.status!=='cancelled'||true)
-      .sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time));
-
-    if(!active.length){ list.innerHTML='<div class="wm-empty">אין תורים השבוע</div>'; return; }
-
-    // Group by date
-    const byDate = {};
-    active.forEach(a=>{ if(!byDate[a.date]) byDate[a.date]=[]; byDate[a.date].push(a); });
-
-    list.innerHTML = '';
-    Object.keys(byDate).sort().forEach(ds=>{
-      const grp = document.createElement('div');
-      grp.className = 'wm-day';
-      grp.innerHTML = `<div class="wm-day-hd">${fmtShort(ds)}</div>`;
-      byDate[ds].forEach(a=>{
-        const statusMap = {confirmed:'מאושר',completed:'הושלם',cancelled:'בוטל'};
-        const row = document.createElement('div');
-        row.className = `wm-row ${a.status||'confirmed'}`;
-        row.innerHTML = `
-          <div class="wm-time">${a.time}</div>
-          <div style="flex:1;min-width:0">
-            <div class="wm-name">${a.fullName}</div>
-            <div class="wm-phone">${a.phone}</div>
-          </div>
-          <span class="wm-status ${a.status||'confirmed'}">${statusMap[a.status||'confirmed']||''}</span>`;
-        grp.appendChild(row);
-      });
-      list.appendChild(grp);
-    });
-  }catch{ list.innerHTML='<div class="wm-empty">שגיאה בטעינה</div>'; }
-}
-
-function closeWeekModal(){
-  document.getElementById('weekModal').classList.add('hidden');
-}
-
-// ════════════════════════════════════════════
-// RENDER APPOINTMENTS
-// ════════════════════════════════════════════
-function renderAppts(){
-  const list = document.getElementById('apptlist');
-  const isBlocked = A.blocked.includes(A.curDate);
-  const isHol = CLOSED.has(A.curDate);
-  const d = new Date(A.curDate+'T12:00:00');
-  const isShab = d.getDay()===6;
-  const dayStatus = A.dayStatus[A.curDate];
-
-  // Find next upcoming appointment for today
-  const now = new Date();
-  const todayStr = toISO(now);
-  if(A.curDate === todayStr){
-    const curTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-    const next = A.appts.find(a=>a.time>curTime && a.status==='confirmed');
-    const card = document.getElementById('nextStatCard');
-    if(card){
-      if(next){card.querySelector('.stat-n').textContent=next.time; card.querySelector('.stat-n').style.fontSize='1.5rem'; card.querySelector('.stat-n').style.color='var(--gold2)'; card.querySelector('.stat-l').textContent=next.fullName;}
-      else{card.querySelector('.stat-n').textContent='—'; card.querySelector('.stat-n').style.fontSize='.9rem';}
-    }
-  }
-
-  // Remove existing status banner
-  document.getElementById('dayStatusBanner')?.remove();
-
-  // Show status banner if a custom status is set
-  if(dayStatus){
-    const cfg = STATUS_CFG[dayStatus.type] || {};
-    const banner = document.createElement('div');
-    banner.id = 'dayStatusBanner';
-    banner.className = `dsb dsb-${dayStatus.type}`;
-    const bannerText = dayStatus.type === 'close_at'
-      ? `עובדים עד ${dayStatus.closeAt}`
-      : (dayStatus.note || cfg.label);
-    banner.innerHTML = `<span class="dsb-icon">${cfg.icon||'📋'}</span><span class="dsb-text">${bannerText}</span><span class="dsb-change">שנה ›</span>`;
-    banner.onclick = () => openStatusModal(A.curDate);
-    list.before(banner);
-  }
-
-  if(!A.appts.length){
-    const msg = isShab ? 'שבת שלום 🕍' : isHol ? 'יום חג — מספרה סגורה 🕎' : isBlocked ? 'יום חסום — מספרה סגורה' : dayStatus ? (STATUS_CFG[dayStatus.type]?.msg || dayStatus.note || 'סטטוס מיוחד') : 'אין תורים ביום זה';
-    list.innerHTML = `<div class="empty-day"><div class="em-ico">${isShab||isHol?'🕍':'📅'}</div><p>${msg}</p></div>`;
-    return;
-  }
-
-  const sorted=[...A.appts].sort((a,b)=>a.time.localeCompare(b.time));
-  list.innerHTML='';
-
-  sorted.forEach(a=>{
-    const status = a.status || 'confirmed';
-    const card = document.createElement('div');
-    card.className = `acard ${status}`;
-    card.id = `card-${a.id}`;
-
-    const waMsg = `שלום, זה יאיר. מספרת DALOR.`;
-    const _waDig = a.phone.replace(/\D/g,'');
-    const waLink = `https://wa.me/${_waDig.startsWith('0')?'972'+_waDig.slice(1):_waDig}?text=${encodeURIComponent(waMsg)}`;
-
-    let acts='';
-    if(status==='confirmed'){
-      acts=`
-        <button class="aact done" onclick="setStatus('${a.id}','completed')">
-          <svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg> הושלם
-        </button>
-        <button class="aact cancel" onclick="setStatus('${a.id}','cancelled')">
-          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> ביטול
-        </button>
-        <button class="aact del" onclick="delAppt('${a.id}')" title="מחק">
-          <svg viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-        </button>`;
-    } else {
-      acts=`
-        <button class="aact undo" onclick="setStatus('${a.id}','confirmed')">
-          <svg viewBox="0 0 24 24"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15a9 9 0 1 0 .49-3.87"/></svg> שחזור
-        </button>
-        <button class="aact del" onclick="delAppt('${a.id}')">
-          <svg viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg> מחק
-        </button>`;
-    }
-
-    card.innerHTML=`
-      <div class="acard-top">
-        <div class="time-badge">${a.time}</div>
-        <div class="ainfo">
-          <div class="aname">${a.fullName}</div>
-          <div class="aphone">
-            ${a.phone}
-            <a class="wa-call" href="${waLink}" target="_blank" rel="noreferrer" title="שלח וואטסאפ">
-              <svg style="width:13px;height:13px;fill:currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            </a>
-          </div>
-          ${a.notes?`<div class="anotes">${a.notes}</div>`:''}
-          <span class="astatus ${status}">${statusLabel(status)}</span>
-          ${a.source==='admin'?'<span class="src-badge">✏️ נקבע ידנית</span>':''}
-        </div>
-      </div>
-      <div class="acard-actions">${acts}</div>
-    `;
-    list.appendChild(card);
-  });
-}
-
-// ════════════════════════════════════════════
-// ACTIONS
-// ════════════════════════════════════════════
-async function setStatus(id, status){
-  try{
-    const r = await adminFetch(`/api/admin/appointments/${id}`, {
-      method:'PATCH', body:JSON.stringify({status})
-    });
-    if(!r.ok) return;
-    const updated = await r.json();
-    A.appts = A.appts.map(a=>a.id===id?updated:a);
-    renderAppts();
-  }catch{}
-}
-
-async function delAppt(id){
-  if(!confirm('למחוק את התור לצמיתות?')) return;
-  try{
-    const r = await adminFetch(`/api/admin/appointments/${id}`, { method:'DELETE' });
-    if(!r.ok) return;
-    A.appts = A.appts.filter(a=>a.id!==id);
-    renderAppts();
-  }catch{}
-}
-
 // ════════════════════════════════════════════
 // DAY STATUS MODAL
 // ════════════════════════════════════════════
@@ -1087,84 +883,16 @@ function initStatusOpts(){
 // ════════════════════════════════════════════
 // ADD APPOINTMENT MODAL
 // ════════════════════════════════════════════
-function openModal(){
-  document.getElementById('modal').classList.remove('hidden');
-  document.getElementById('adderr').textContent='';
-  const di = document.getElementById('adate');
-  if(!di.value) di.value = A.curDate;
-  updateTimeOptions();
-  document.getElementById('aname').focus();
-}
-function closeModal(){ document.getElementById('modal').classList.add('hidden'); }
-
-async function updateTimeOptions(){
-  const ds = document.getElementById('adate').value;
-  const sel = document.getElementById('atime');
-  if(!ds){ sel.innerHTML='<option value="">— בחרו תחילה תאריך —</option>'; return; }
-
-  const allSlots = getSlots(ds);
-  let booked = [];
-  try{
-    const r = await adminFetch(`/api/admin/appointments?date=${ds}`);
-    const appts = await r.json();
-    booked = appts.filter(a=>a.status!=='cancelled').map(a=>a.time);
-  }catch{}
-
-  const available = allSlots.filter(t=>!booked.includes(t));
-  if(!available.length){
-    sel.innerHTML='<option value="">אין שעות פנויות</option>';
-    return;
-  }
-  sel.innerHTML='<option value="">בחרו שעה…</option>'+
-    available.map(t=>`<option value="${t}">${t}</option>`).join('');
-}
-
-document.getElementById('addform').addEventListener('submit', async e=>{
-  e.preventDefault();
-  const ds    = document.getElementById('adate').value;
-  const time  = document.getElementById('atime').value;
-  const name  = document.getElementById('aname').value.trim();
-  const phone = document.getElementById('aphone').value.trim();
-  const notes = document.getElementById('anotes').value.trim();
-  const err   = document.getElementById('adderr');
-  err.textContent='';
-
-  if(!ds)    { err.textContent='נא לבחור תאריך'; return; }
-  if(!time)  { err.textContent='נא לבחור שעה'; return; }
-  if(!name)  { err.textContent='נא להזין שם'; return; }
-  if(!phone) { err.textContent='נא להזין טלפון'; return; }
-
-  const btn=document.getElementById('addbtn');
-  btn.disabled=true; btn.textContent='שומר…';
-  try{
-    const r=await adminFetch('/api/admin/appointments',{
-      method:'POST', body:JSON.stringify({date:ds,time,fullName:name,phone,notes})
-    });
-    if(r.status===409){ err.textContent='שעה זו כבר תפוסה'; updateTimeOptions(); return; }
-    if(!r.ok) throw new Error();
-    closeModal();
-    // Reset form
-    document.getElementById('addform').reset();
-    if(ds===A.curDate){ await loadDay(); }
-    else{ A.curDate=ds; await loadDay(); }
-  }catch{ err.textContent='שגיאה בשמירה'; }
-  finally{ btn.disabled=false; btn.textContent='שמירת התור'; }
-});
-
-document.getElementById('adate').addEventListener('change', updateTimeOptions);
-
 // ════════════════════════════════════════════
 // EVENTS
 // ════════════════════════════════════════════
-document.getElementById('loginbtn').addEventListener('click', tryLogin);
+document.getElementById('loginbtn').addEventListener('click', ()=>tryLogin());
 document.getElementById('keyinput').addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });
-document.getElementById('logoutbtn').addEventListener('click', logout);
+document.getElementById('logoutbtn').addEventListener('click', ()=>logout());
 document.getElementById('prevday').addEventListener('click', ()=>shiftDay(-1));
 document.getElementById('nextday').addEventListener('click', ()=>shiftDay(1));
 document.getElementById('todaybtn').addEventListener('click', goToday);
-document.getElementById('fab').addEventListener('click', openModal);
-document.getElementById('closemodal').addEventListener('click', closeModal);
-document.getElementById('modal').addEventListener('click', e=>{ if(e.target===document.getElementById('modal')) closeModal(); });
+document.getElementById('fab').addEventListener('click', ()=>openModal());
 
 // ════════════════════════════════════════════
 // WEB PUSH
@@ -1318,13 +1046,7 @@ function dismissToast(safeKey){
 // ════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', ()=>{ initStatusOpts(); });
 
-const savedKey = localStorage.getItem(ADMIN_KEY_LS);
-if(savedKey){
-  A.key = savedKey;
-  fetch('/api/admin/auth',{headers:{'x-admin-key':savedKey}})
-    .then(r=>{ if(r.ok) showAdmin(); else localStorage.removeItem(ADMIN_KEY_LS); })
-    .catch(()=>{});
-}
 </script>
+<script src="/admin-v2.js"></script>
 </body>
 </html>
