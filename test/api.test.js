@@ -517,3 +517,20 @@ test('כניסה עם מייל: הגבלת ניסיונות וקודים', async
   for (let i = 0; i < 3; i++) await api('POST', '/api/v2/auth/email/start', { email: 'many@example.com' });
   assert.equal((await api('POST', '/api/v2/auth/email/start', { email: 'many@example.com' })).status, 429);
 });
+
+test('זמינות לטווח ימים בבקשה אחת תואמת בדיוק לזמינות יום-יום', async () => {
+  await setupBarbers();
+  await book({ time: '10:00' }); await book({ time: '10:00', customer: { phone: '0507070707' } });
+  await api('PUT', '/api/admin/blocked', [E.addDays(DATE, 2)], ADMIN);
+  const people = [{ serviceId: 'haircut' }, { serviceId: 'beard' }];
+  const to = E.addDays(DATE, 6);
+  const range = await api('POST', '/api/v2/availability/range', { from: DATE, to, people, mode: 'any' });
+  assert.equal(range.status, 200);
+  for (let d = DATE; d <= to; d = E.addDays(d, 1)) {
+    const single = await api('POST', '/api/v2/availability', { date: d, people, mode: 'any' });
+    assert.equal(range.body.days[d].open, single.body.open, d);
+    assert.deepEqual(range.body.days[d].slots.map(s => s.time), single.body.slots.map(s => s.time), d);
+  }
+  assert.equal(range.body.days[E.addDays(DATE, 2)].open, false);
+  assert.equal((await api('POST', '/api/v2/availability/range', { from: DATE, to: E.addDays(DATE, 90), people })).status, 400);
+});

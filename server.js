@@ -181,10 +181,11 @@ async function sendPush(payload) {
 
 function buildMailer() {
   if (!GMAIL_USER || !GMAIL_PASS) return null;
-  return nodemailer.createTransport({
-    service: 'gmail',
+  if (!global.__mailer) global.__mailer = nodemailer.createTransport({
+    service: 'gmail', pool: true, maxConnections: 2,
     auth: { user: GMAIL_USER, pass: GMAIL_PASS },
   });
+  return global.__mailer;
 }
 
 async function sendReminderEmail(appt, type) {
