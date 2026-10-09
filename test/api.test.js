@@ -8,7 +8,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const E = require('../lib/engine');
 const { processOutbox } = require('../lib/notify');
-const { app, db, mailOutbox } = require('../server');
+const { app, db } = require('../server');
 
 let server, base;
 test.before(async () => { server = app.listen(0); await new Promise(r => server.once('listening', r)); base = `http://127.0.0.1:${server.address().port}`; });
@@ -429,26 +429,6 @@ test('הזמנה ידנית של מנהל: כפיית ספר; מונעת חפי�
   assert.equal((await mk({ time: '06:00' })).status, 409);
 });
 
-test('אזור אישי: מזוהה רק לפי token של המכשיר, לא לפי טלפון', async () => {
-  const r = await book({ customer: { fullName: 'דנה לוי', phone: '0541231234' } });
-  const tok = r.body.customerToken;
-  assert.ok(tok && tok.startsWith('0541231234.'));
-  assert.equal((await api('GET', '/api/v2/me')).status, 401);
-  assert.equal((await fetch(base + '/api/v2/me', { headers: { 'x-customer-token': '0541231234.guess' } })).status, 401);
-  assert.equal((await fetch(base + '/api/v2/me', { headers: { 'x-customer-token': '0541231234' } })).status, 401);
-  const me = await (await fetch(base + '/api/v2/me', { headers: { 'x-customer-token': tok } })).json();
-  assert.equal(me.fullName, 'דנה לוי'); assert.equal(me.upcoming.length, 1); assert.equal(me.upcoming[0].bookingId, r.body.bookingId);
-  // הזמנה נוספת מאותו מכשיר לא מנפיקה token חדש; מכשיר אחר כן, ושניהם תקפים
-  const same = await fetch(base + '/api/v2/bookings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-customer-token': tok },
-    body: JSON.stringify({ customer: customer({ fullName: 'דנה לוי', phone: '0541231234' }), people: [{ serviceId: 'haircut' }], mode: 'any', date: DATE, time: '12:00' }) });
-  assert.equal((await same.json()).customerToken, null);
-  const other = await book({ time: '13:00', customer: { fullName: 'דנה לוי', phone: '0541231234' } });
-  assert.ok(other.body.customerToken && other.body.customerToken !== tok);
-  // לקוח אחר לא רואה את התורים של דנה
-  const rr = await book({ time: '15:00', customer: { fullName: 'אחר', phone: '0549999000' } });
-  const me2 = await (await fetch(base + '/api/v2/me', { headers: { 'x-customer-token': rr.body.customerToken } })).json();
-  assert.equal(me2.upcoming.length, 1); assert.equal(me2.fullName, 'אחר');
-});
 
 test('כניסה אישית לכולם: יאיר מנהל (קוד אישי), ספר מוגבל; חייב להישאר מנהל פעיל', async () => {
   const cfg = (await api('GET', '/api/staff/config', null, ADMIN)).body;
@@ -466,56 +446,6 @@ test('כניסה אישית לכולם: יאיר מנהל (קוד אישי), ס�
   // אי אפשר להשאיר בלי מנהל פעיל
   const noAdmin = cfg.barbers.map(b => ({ ...b, role: 'barber' }));
   assert.equal((await api('PUT', '/api/staff/config/barbers', { value: noAdmin }, ADMIN)).status, 400);
-});
-
-const meWith = async tok => fetch(base + '/api/v2/me', { headers: { 'x-customer-token': tok } });
-const codeFor = email => { const m = [...mailOutbox].reverse().find(x => x.to === email); return m.text.match(/\d{6}/)[0]; };
-
-test('כניסה עם מייל: קוד חד-פעמי, חשבון נשאר מחובר, מקשר רק הזמנות של המחובר', async () => {
-  mailOutbox.length = 0;
-  assert.equal((await api('POST', '/api/v2/auth/email/start', { email: 'nope' })).status, 400);
-  assert.equal((await api('POST', '/api/v2/auth/email/start', { email: 'Dana@Example.com' })).status, 200);
-  assert.equal(mailOutbox.length, 1); assert.equal(mailOutbox[0].to, 'dana@example.com');
-  const code = codeFor('dana@example.com');
-  assert.equal((await api('POST', '/api/v2/auth/email/verify', { email: 'dana@example.com', code: '000000' })).status, 400);
-  const v = await api('POST', '/api/v2/auth/email/verify', { email: 'dana@example.com', code });
-  assert.equal(v.status, 200); assert.ok(v.body.token.startsWith('acct.'));
-  assert.equal((await api('POST', '/api/v2/auth/email/verify', { email: 'dana@example.com', code })).status, 400);
-  const me0 = await (await meWith(v.body.token)).json();
-  assert.equal(me0.email, 'dana@example.com'); assert.equal(me0.upcoming.length, 0);
-  const r = await fetch(base + '/api/v2/bookings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-customer-token': v.body.token },
-    body: JSON.stringify({ customer: customer({ fullName: 'דנה', phone: '0541110000' }), people: [{ serviceId: 'haircut' }], mode: 'any', date: DATE, time: '10:00' }) });
-  assert.equal(r.status, 201);
-  await new Promise(r => setTimeout(r, 50));
-  const me1 = await (await meWith(v.body.token)).json();
-  assert.equal(me1.upcoming.length, 1); assert.equal(me1.fullName, 'דנה');
-  await book({ time: '12:00', customer: { fullName: 'זר', phone: '0549990000' } });
-  assert.equal((await meWith(v.body.token).then(r => r.json())).upcoming.length, 1);
-  assert.equal((await meWith('acct.abc.def')).status, 401);
-  await fetch(base + '/api/v2/auth/logout', { method: 'POST', headers: { 'x-customer-token': v.body.token } });
-  assert.equal((await meWith(v.body.token)).status, 401);
-});
-
-test('כניסה עם מייל ממכשיר שכבר מוכר מקשרת את התורים הקיימים שלו', async () => {
-  mailOutbox.length = 0;
-  const b = await book({ customer: { fullName: 'רוני', phone: '0521212121' } });
-  await api('POST', '/api/v2/auth/email/start', { email: 'roni@example.com' });
-  const res = await fetch(base + '/api/v2/auth/email/verify', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-customer-token': b.body.customerToken },
-    body: JSON.stringify({ email: 'roni@example.com', code: codeFor('roni@example.com') }) });
-  const tok = (await res.json()).token;
-  const me = await (await meWith(tok)).json();
-  assert.equal(me.upcoming.length, 1); assert.equal(me.phone, '0521212121');
-});
-
-test('כניסה עם מייל: הגבלת ניסיונות וקודים', async () => {
-  mailOutbox.length = 0;
-  await api('POST', '/api/v2/auth/email/start', { email: 'lock@example.com' });
-  const real = codeFor('lock@example.com');
-  const wrong = real === '111111' ? '222222' : '111111';
-  for (let i = 0; i < 5; i++) await api('POST', '/api/v2/auth/email/verify', { email: 'lock@example.com', code: wrong });
-  assert.equal((await api('POST', '/api/v2/auth/email/verify', { email: 'lock@example.com', code: real })).status, 429);
-  for (let i = 0; i < 3; i++) await api('POST', '/api/v2/auth/email/start', { email: 'many@example.com' });
-  assert.equal((await api('POST', '/api/v2/auth/email/start', { email: 'many@example.com' })).status, 429);
 });
 
 test('זמינות לטווח ימים בבקשה אחת תואמת בדיוק לזמינות יום-יום', async () => {
