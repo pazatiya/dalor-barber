@@ -461,6 +461,14 @@ app.delete('/api/admin/appointments/:id', requireAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// אבחון מייל: האם GMAIL_USER/GMAIL_PASS מוגדרים בשרת, והאם Gmail מאשר את ההתחברות
+app.get('/api/admin/mail-check', requireAdmin, async (req, res) => {
+  const out = { user: GMAIL_USER ? GMAIL_USER.replace(/(.{2}).*(@.*)/, '$1***$2') : null, hasPass: !!GMAIL_PASS };
+  if (!GMAIL_USER || !GMAIL_PASS) return res.json({ ...out, configured: false });
+  try { await buildMailer().verify(); res.json({ ...out, configured: true, verified: true }); }
+  catch (e) { res.json({ ...out, configured: true, verified: false, error: String(e.message).slice(0, 200) }); }
+});
+
 app.get('/api/admin/due-reminders', requireAdmin, async (req, res) => {
   try { res.json(await processDueReminders()); }
   catch { res.json([]); }
