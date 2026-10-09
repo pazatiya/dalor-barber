@@ -1178,7 +1178,7 @@ $('confirmBtn').addEventListener('click', async () => {
     }
     if (r.status === 429) { err.textContent = r.body?.message || 'יותר מדי ניסיונות, נסו שוב עוד מעט'; return; }
     if (!r.ok) { err.textContent = r.body?.message || 'שגיאה בשמירת התור, אנא נסו שוב'; return; }
-    if (r.body.customerToken) setCT(r.body.customerToken);
+    if (r.body.customerToken && !getCT().startsWith('acct.')) setCT(r.body.customerToken);
     initMe();
     renderDone(r.body);
   } catch { err.textContent = 'בעיית תקשורת, אנא נסו שוב'; }
@@ -1271,12 +1271,13 @@ async function openMe() {
     S.me = await loadMe();
     rememberProfile(S.me);
     if (!S.me) {
-      $('meBody').innerHTML = '<div class="personal-empty"><span class="personal-mark" aria-hidden="true">D</span><h3>התורים שלך, במקום אחד</h3><p>אחרי קביעת תור במכשיר הזה, התורים והפרטים שלך יופיעו כאן באופן אוטומטי.</p><p class="hint">כבר קבעת ממכשיר אחר? אפשר לנהל את התור באמצעות הקישור שקיבלת באישור ההזמנה.</p></div>';
+      $('meBody').innerHTML = '<div class="personal-empty"><span class="personal-mark" aria-hidden="true">D</span><h3>התורים שלך, במקום אחד</h3><p>אחרי קביעת תור במכשיר הזה, התורים והפרטים שלך יופיעו כאן באופן אוטומטי.</p><p class="hint">כבר קבעת ממכשיר אחר? אפשר לנהל את התור באמצעות הקישור שקיבלת באישור ההזמנה.</p></div><div class="personal-empty" id="emailLogin" style="margin-top:14px"><h3>כניסה עם מייל</h3><p>רוצה אזור אישי שנשאר איתך בכל מכשיר? הקלידו מייל ונשלח קוד כניסה, בלי סיסמה.</p><div class="field" style="margin-top:12px"><label for="emailIn">כתובת מייל</label><input id="emailIn" type="email" inputmode="email" autocomplete="email" dir="ltr" placeholder="name@example.com"/></div><div class="field hidden" id="codeWrap"><label for="codeIn">קוד בן 6 ספרות</label><input id="codeIn" inputmode="numeric" autocomplete="one-time-code" maxlength="6" dir="ltr" placeholder="000000"/></div><div class="err" id="emailErr" role="alert"></div><button class="cta" id="emailBtn" type="button">שלחו לי קוד</button></div>';
+      bindEmailLogin();
       return;
     }
     const me = S.me;
     $('meForget').hidden = false;
-    $('meBody').innerHTML = `<div class="personal-profile"><span class="personal-avatar" aria-hidden="true">${esc(Array.from(me.fullName || 'D')[0])}</span><div><h3>${esc(me.fullName)}</h3><bdi dir="ltr">${esc(me.phone)}</bdi></div></div><div class="personal-stats"><div><strong>${me.upcoming.length}</strong><span>תורים קרובים</span></div><div><strong>${me.visits}</strong><span>ביקורים שהושלמו</span></div></div><h3 class="personal-heading">התורים הקרובים שלך</h3>`;
+    $('meBody').innerHTML = `<div class="personal-profile"><span class="personal-avatar" aria-hidden="true">${esc(Array.from(me.fullName || me.email || 'D')[0])}</span><div><h3>${esc(me.fullName || 'שלום')}</h3>${me.email ? `<bdi dir="ltr">${esc(me.email)}</bdi>` : `<bdi dir="ltr">${esc(me.phone || '')}</bdi>`}</div></div><div class="personal-stats"><div><strong>${me.upcoming.length}</strong><span>תורים קרובים</span></div><div><strong>${me.visits}</strong><span>ביקורים שהושלמו</span></div></div><h3 class="personal-heading">התורים הקרובים שלך</h3>`;
     $('meBody').insertAdjacentHTML('beforeend', me.upcoming.length
       ? me.upcoming.map(u => `<a class="personal-appointment" href="/?b=${encodeURIComponent(u.bookingId)}&t=${encodeURIComponent(u.manageToken)}"><div class="personal-date">${fmtHe(u.date)}<strong><bdi dir="ltr">${esc(u.time)}</bdi></strong></div><div class="personal-services">${esc(u.services.join(', '))}${u.people > 1 ? ` · ${u.people} אנשים` : ''}</div><span class="personal-manage">פרטי התור וניהול ההזמנה ←</span></a>`).join('')
       : '<div class="personal-empty"><p>אין לך תורים קרובים כרגע.</p><p class="hint">אפשר לקבוע את התור הבא עם הפרטים שכבר נשמרו.</p></div>');
@@ -1289,6 +1290,26 @@ async function openMe() {
     $('meBody').setAttribute('aria-busy', 'false');
   }
 }
+function bindEmailLogin() {
+  const btn = $('emailBtn'), err = $('emailErr'); let sent = false;
+  btn.addEventListener('click', async () => {
+    err.textContent = ''; btn.disabled = true;
+    try {
+      const email = $('emailIn').value.trim();
+      if (!sent) {
+        const r = await jf('/api/v2/auth/email/start', { method: 'POST', body: JSON.stringify({ email }) });
+        if (!r.ok) { err.textContent = r.body?.message || 'שגיאה, נסו שוב'; return; }
+        sent = true; $('codeWrap').classList.remove('hidden'); $('codeIn').focus();
+        btn.textContent = 'כניסה'; err.textContent = 'שלחנו קוד למייל. אם לא הגיע, בדקו בתיקיית הספאם.';
+      } else {
+        const r = await jf('/api/v2/auth/email/verify', { method: 'POST', headers: { 'x-customer-token': getCT() }, body: JSON.stringify({ email, code: $('codeIn').value.trim() }) });
+        if (!r.ok) { err.textContent = r.body?.message || 'הקוד שגוי'; return; }
+        setCT(r.body.token); await initMe(); openMe();
+      }
+    } catch { err.textContent = 'בעיית תקשורת, נסו שוב'; }
+    finally { btn.disabled = false; }
+  });
+}
 $('meHome').addEventListener('click', () => {
   $('app').classList.remove('visible'); $('app').inert = true;
   $('home').classList.remove('out'); $('home').inert = false;
@@ -1296,7 +1317,7 @@ $('meHome').addEventListener('click', () => {
 });
 $('meBtn').addEventListener('click', openMe);
 $('meNew').addEventListener('click', start);
-$('meForget').addEventListener('click', () => { if (confirm('להתנתק מהמכשיר הזה? הפרטים שנשמרו יימחקו מהמכשיר.')) { setCT(''); S.me = null; S.d = { fullName:'', phone:'', firstVisit:null, notes:'', consent:null }; location.href = '/'; } });
+$('meForget').addEventListener('click', async () => { if (confirm('להתנתק מהמכשיר הזה? הפרטים שנשמרו יימחקו מהמכשיר.')) { if (getCT().startsWith('acct.')) await jf('/api/v2/auth/logout', { method: 'POST', headers: { 'x-customer-token': getCT() } }).catch(() => {}); setCT(''); S.me = null; S.d = { fullName:'', phone:'', firstVisit:null, notes:'', consent:null }; location.href = '/'; } });
 
 // Expose the selected state of the existing native choice buttons to assistive technology.
 function syncChoiceState() {

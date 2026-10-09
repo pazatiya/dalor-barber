@@ -132,7 +132,15 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-const bookingSvc = createBookingService({ db, baseUrl: process.env.PUBLIC_BASE_URL || 'https://dalorbook.duckdns.org' });
+const mailOutbox = []; // בבדיקות (NODE_ENV=test) מיילים נאספים כאן במקום להישלח
+const sendCustomerMail = async opts => {
+  if (process.env.NODE_ENV === 'test' || process.env.USE_MEMORY_DB === '1') { mailOutbox.push(opts); console.log('[dev mail]', opts.to, opts.text.split('\n')[0]); return; }
+  const mailer = buildMailer();
+  if (!mailer) throw new Error('mail not configured');
+  await mailer.sendMail({ from: `"DALOR מספרה" <${GMAIL_USER}>`, ...opts });
+};
+const accounts = require('./lib/accounts').createAccountService({ db, sendMail: sendCustomerMail });
+const bookingSvc = createBookingService({ db, baseUrl: process.env.PUBLIC_BASE_URL || 'https://dalorbook.duckdns.org', accounts });
 const authenticate = makeAuthenticator({ adminKey: ADMIN_KEY, loadBarbers: async () => (await bookingSvc.loadConfig()).barbers });
 const sender = makeSender();
 
@@ -377,7 +385,7 @@ function notifyNewBooking(r) {
   }).catch(() => {});
 }
 
-require('./lib/routes')(app, { db, svc: bookingSvc, authenticate, sender, rl: { book: bookRateLimit, avail: availRateLimit, admin: adminRateLimit }, notifyNewBooking, ADMIN_KEY });
+require('./lib/routes')(app, { db, svc: bookingSvc, accounts, authenticate, sender, rl: { book: bookRateLimit, avail: availRateLimit, admin: adminRateLimit }, notifyNewBooking, ADMIN_KEY });
 
 // ── Admin ────────────────────────────────────────────────────────
 
@@ -515,4 +523,4 @@ if (process.env.DISABLE_INTERNAL_CRON !== 'true' && sender.configured) {
 }
 
 if (require.main === module) start();
-module.exports = { app, db, start, bookingSvc, sendPush };
+module.exports = { app, db, start, bookingSvc, sendPush, mailOutbox };
