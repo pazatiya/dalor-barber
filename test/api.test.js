@@ -362,7 +362,8 @@ test('תור-הודעות: שליחה בלי כפילות, שינוי שעה מ�
 
   await api('POST', `/api/v2/bookings/${r.body.bookingId}/cancel`, { token: r.body.manageToken });
   const after = (await db.collection('outbox').get()).docs.map(d => d.data());
-  assert.ok(after.some(o => o.kind === 'cancel' && o.status === 'pending'));
+  assert.ok(after.some(o => o.kind === 'cancel_confirm' && o.status === 'pending')); // ביטול ביוזמת הלקוח
+  assert.ok(!after.some(o => o.kind === 'cancel'));
   assert.ok(after.filter(o => o.kind.startsWith('rem')).every(o => o.status === 'superseded'));
 
   // כשל שליחה: ניסיונות חוזרים ואז failed
@@ -463,4 +464,76 @@ test('זמינות לטווח ימים בבקשה אחת תואמת בדיוק �
   }
   assert.equal(range.body.days[E.addDays(DATE, 2)].open, false);
   assert.equal((await api('POST', '/api/v2/availability/range', { from: DATE, to: E.addDays(DATE, 90), people })).status, 400);
+});
+
+
+// ── תבניות Meta המאושרות: אירוע → תבנית → פרמטרים ─────────────────────────
+const outboxOf = async () => (await db.collection('outbox').get()).docs.map(d => d.data());
+const setAutoConfirm = async v => {
+  const cfg = (await api('GET', '/api/staff/config', null, ADMIN)).body;
+  assert.equal((await api('PUT', '/api/staff/config/settings', { value: { ...cfg.settings, autoConfirm: v } }, ADMIN)).status, 200);
+};
+
+test('תבניות: בקשה שממתינה לאישור — רק pending, בלי תזכורות; אישור → approved + תזכורות', async () => {
+  await setAutoConfirm(false);
+  const r = await book({ time: '10:00', customer: { phone: '0501110001', whatsappConsent: true } });
+  assert.equal(r.body.status, 'pending');
+  let out = await outboxOf();
+  assert.deepEqual(out.map(o => o.kind), ['pending']);
+  assert.equal(out[0].params[0], 'ישראל'); assert.equal(out[0].params[2], '10:00');
+  assert.match(out[0].params[1], /^\d{2}\/\d{2}\/\d{4}$/);
+
+  const appt = (await db.collection('appointments').get()).docs[0].data();
+  assert.equal((await api('PATCH', `/api/staff/appointments/${appt.id}`, { status: 'confirmed' }, ADMIN)).status, 200);
+  out = await outboxOf();
+  assert.deepEqual(out.map(o => o.kind).sort(), ['approved', 'pending', 'rem24', 'rem2h']);
+  assert.equal(out.find(o => o.kind === 'pending').status, 'superseded'); // עוד לא נשלחה — מוחלפת באישור
+  assert.deepEqual(out.find(o => o.kind === 'approved').params.length, 3);
+  assert.deepEqual(out.find(o => o.kind === 'rem2h').params, ['ישראל', '10:00']);
+  assert.equal((await db.collection('bookings').doc(r.body.bookingId).get()).data().status, 'confirmed');
+
+  // אישור שני לא יוצר הודעה כפולה
+  await api('PATCH', `/api/staff/appointments/${appt.id}`, { status: 'pending' }, ADMIN);
+  await api('PATCH', `/api/staff/appointments/${appt.id}`, { status: 'confirmed' }, ADMIN);
+  assert.equal((await outboxOf()).filter(o => o.kind === 'approved').length, 1);
+});
+
+test('תבניות: דחיית בקשה ממתינה → unavailable; ביטול ע"י המנהל של תור מאושר → cancel', async () => {
+  await setAutoConfirm(false);
+  const r = await book({ time: '11:00', customer: { phone: '0501110002', whatsappConsent: true } });
+  const appt = (await db.collection('appointments').get()).docs[0].data();
+  assert.equal((await api('PATCH', `/api/staff/appointments/${appt.id}`, { status: 'cancelled' }, ADMIN)).status, 200);
+  let out = await outboxOf();
+  const un = out.find(o => o.kind === 'unavailable');
+  assert.ok(un && un.status === 'pending');
+  assert.deepEqual(un.params.slice(2), ['11:00']); // השעה שביקש, לא ריקה
+  assert.ok(out.filter(o => o.kind !== 'unavailable').every(o => o.status === 'superseded')); // ה-pending שלא נשלחה בוטלה
+
+  db.reset();
+  await setAutoConfirm(true);
+  await book({ time: '12:00', customer: { phone: '0501110003', whatsappConsent: true } });
+  const a2 = (await db.collection('appointments').get()).docs[0].data();
+  await api('PATCH', `/api/staff/appointments/${a2.id}`, { status: 'cancelled' }, ADMIN);
+  out = await outboxOf();
+  const c = out.find(o => o.kind === 'cancel');
+  assert.ok(c && c.status === 'pending');
+  assert.equal(c.params[2], '12:00');
+});
+
+test('תבניות: הזמנה קבוצתית → group (לא confirm), עם מספר אנשים ושעת התחלה', async () => {
+  const r = await book({ time: '10:00', people: [{ serviceId: 'haircut' }, { serviceId: 'haircut' }], customer: { phone: '0501110004', whatsappConsent: true } });
+  assert.equal(r.status, 201);
+  const out = await outboxOf();
+  assert.deepEqual(out.map(o => o.kind).sort(), ['group', 'rem24', 'rem2h']);
+  const g = out.find(o => o.kind === 'group');
+  assert.equal(g.params[1], '2'); assert.equal(g.params[3], '10:00');
+});
+
+test('תבניות: אישור רגיל כולל שירות ופורמט תאריך ישראלי', async () => {
+  await book({ time: '10:00', customer: { phone: '0501110005', whatsappConsent: true } });
+  const c = (await outboxOf()).find(o => o.kind === 'confirm');
+  assert.equal(c.params.length, 4);
+  assert.match(c.params[1], /^\d{2}\/\d{2}\/\d{4}$/);
+  assert.equal(c.params[2], '10:00');
+  assert.ok(c.params[3].length > 0);
 });
