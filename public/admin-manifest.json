@@ -4,13 +4,29 @@
   "description": "ממשק ניהול תורים - DALOR ברבר סטודיו",
   "start_url": "/admin.html",
   "display": "standalone",
-  "background_color": "#06060a",
+  "background_color": "#000000",
   "theme_color": "#c9a84c",
   "lang": "he",
   "dir": "rtl",
   "orientation": "portrait",
   "icons": [
-    { "src": "/logo.jpg", "sizes": "192x192", "type": "image/jpeg", "purpose": "any" },
-    { "src": "/logo.jpg", "sizes": "512x512", "type": "image/jpeg", "purpose": "any" }
+    {
+      "src": "/admin-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/admin-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/admin-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
