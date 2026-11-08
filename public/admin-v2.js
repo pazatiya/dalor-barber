@@ -220,7 +220,7 @@ async function loadWeek() {
   A.weekAppts = r.ok ? r.data : [];
   const list = A.weekAppts;
   const cols = DAYS_HE.map((d, i) => { const ds = addDays(from, i); const dd = new Date(ds + 'T12:00:00'); return { label: d, sub: `${dd.getDate()}/${dd.getMonth() + 1}`, date: ds, appts: list.filter(a => a.date === ds) }; });
-  el.innerHTML = `<div class="wk-nav"><button class="dnav-btn" id="wkPrev">›</button><div class="wk-t">${fmtShort(from).replace(/^יום \S+, /, '')} – ${fmtShort(to).replace(/^יום \S+, /, '')}<br><button class="link" id="wkToday">השבוע הנוכחי</button></div><button class="dnav-btn" id="wkNext">‹</button></div>
+  el.innerHTML = `<div class="wk-nav"><button class="dnav-btn" id="wkPrev">‹</button><div class="wk-t">${fmtShort(from).replace(/^יום \S+, /, '')} – ${fmtShort(to).replace(/^יום \S+, /, '')}<br><button class="link" id="wkToday">השבוע הנוכחי</button></div><button class="dnav-btn" id="wkNext">›</button></div>
     ${timeline(cols)}`;
   document.getElementById('wkPrev').onclick = () => { A.weekStart = addDays(A.weekStart, -7); loadWeek(); };
   document.getElementById('wkNext').onclick = () => { A.weekStart = addDays(A.weekStart, 7); loadWeek(); };
