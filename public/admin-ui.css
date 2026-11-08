@@ -193,3 +193,9 @@ button.crow:hover{border-color:var(--bdg);background:#242424}
 #view-settings>.grid2{background:#1B1B1B;border:1px solid var(--bd);border-radius:16px;padding:24px;margin:16px 0 24px}
 @media(min-width:1200px){#apptlist:has(>.acard){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:18px}}
 @media(max-width:599px){#view-settings>.grid2{padding:18px}}
+
+/* iPhone PWA (status-bar-style=black-translucent + viewport-fit=cover): the page runs
+   under the status bar / Dynamic Island, so the header (logo, bell, logout) was hidden
+   behind it and the bell could not be tapped. Push the header content below the inset. */
+#ahdr{box-sizing:border-box;height:auto;min-height:80px;padding-top:calc(12px + env(safe-area-inset-top))}
+@media(min-width:1000px){#ahdr{min-height:88px}}
